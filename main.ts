@@ -13,7 +13,7 @@ import {
 
 // --- DATA STRUCTURES ---
 interface BaseFlashcard {
-	type: 'multiple-choice' | 'fill-in-the-blank';
+	type: 'multiple-choice' | 'fill-in-the-blank' | 'qa';
 	question: string;
 	customBackgroundColor?: string;
 	customTextColor?: string;
@@ -27,16 +27,27 @@ interface FillInTheBlankCard extends BaseFlashcard {
 	questionPartTwo?: string;
 	answer: string;
 }
-type Flashcard = MultipleChoiceCard | FillInTheBlankCard;
+interface QACard extends BaseFlashcard {
+	type: 'qa';
+	answer: string;
+}
+
+type Flashcard = MultipleChoiceCard | FillInTheBlankCard | QACard;
 
 interface FlashyPluginSettings {
 	shuffleCards: boolean;
 	shuffleAnswers: boolean;
+	autoAdvance: boolean;
+	autoAdvanceDelay: number;
+	defaultModalCardType: 'multiple-choice' | 'fill-in-the-blank' | 'qa';
 }
 
 const DEFAULT_SETTINGS: FlashyPluginSettings = {
 	shuffleCards: false,
 	shuffleAnswers: true,
+	autoAdvance: false,
+	autoAdvanceDelay: 1000,
+	defaultModalCardType: 'multiple-choice',
 }
 
 export default class FlashyPlugin extends Plugin {
@@ -45,28 +56,22 @@ export default class FlashyPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.addRibbonIcon('blocks', 'Create Flashy Card', () => {
+		this.addRibbonIcon('blocks', 'Create Flashy Cards', () => {
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-
 			if (view) {
-				// Check the current mode of the view
-				if (view.getMode() === 'source') { // 'source' is Editing View
-					// If we're in Editing View, open the modal as normal.
-					new FlashcardCreatorModal(this.app, (result) => {
+				if (view.getMode() === 'source') {
+					new FlashcardCreatorModal(this.app, this.settings, (result) => {
 						if (result) {
 							view.editor.replaceSelection(`\n\`\`\`flashy\n${result}\n\`\`\`\n`);
 						}
 					}).open();
 				} else {
-					// If we're in Reading View ('preview'), show a notice.
 					new Notice("Please switch to Editing View to create a flashcard.");
 				}
 			} else {
-				// If no note is open at all.
 				new Notice("Please open a note to create a flashcard.");
 			}
 		});
-
 
 		this.registerMarkdownCodeBlockProcessor('flashy', (source, el, ctx) => {
 			const settings = this.settings;
@@ -131,6 +136,12 @@ export default class FlashyPlugin extends Plugin {
 				else stats.incorrect++;
 				stats.answered++;
 
+				if (isCorrect && settings.autoAdvance && currentCardIndex < cardsToRender.length - 1) {
+					setTimeout(() => {
+						renderCard(currentCardIndex + 1);
+					}, settings.autoAdvanceDelay);
+				}
+
 				if (stats.answered === cardsToRender.length) {
 					setTimeout(() => renderSummary(), 1000);
 				}
@@ -162,6 +173,9 @@ export default class FlashyPlugin extends Plugin {
 						break;
 					case 'fill-in-the-blank':
 						renderFillInTheBlankBody(body, cardData, onGraded);
+						break;
+					case 'qa':
+						renderQABody(body, cardData, onGraded);
 						break;
 				}
 				renderControls(mainContainer, index, cardsToRender.length, renderCard);
@@ -275,6 +289,35 @@ export default class FlashyPlugin extends Plugin {
 				});
 			}
 
+			function renderQABody(container: HTMLElement, card: QACard, onGraded: (correct: boolean) => void) {
+				const qaContainer = container.createDiv({ cls: 'qa-container' });
+				const answerContainer = qaContainer.createDiv({ cls: 'qa-answer-container', text: card.answer });
+				answerContainer.hide();
+
+				const gradingContainer = qaContainer.createDiv({ cls: 'qa-grading-buttons' });
+				gradingContainer.hide();
+
+				const showAnswerButton = qaContainer.createEl('button', { text: "Show Answer", cls: 'mod-cta' });
+
+				const gradeCorrectButton = gradingContainer.createEl('button', { text: 'I Was Right', cls: 'qa-grading-button correct' });
+				const gradeIncorrectButton = gradingContainer.createEl('button', { text: 'I Was Wrong', cls: 'qa-grading-button incorrect' });
+
+				const handleGrading = (correct: boolean) => {
+					onGraded(correct);
+					gradeCorrectButton.disabled = true;
+					gradeIncorrectButton.disabled = true;
+				};
+
+				gradeCorrectButton.addEventListener('click', () => handleGrading(true));
+				gradeIncorrectButton.addEventListener('click', () => handleGrading(false));
+
+				showAnswerButton.addEventListener('click', () => {
+					showAnswerButton.hide();
+					answerContainer.show();
+					gradingContainer.show();
+				});
+			}
+
 			function renderControls(container: HTMLElement, currentIndex: number, total: number, onNavigate: (newIndex: number) => void) {
 				const controls = container.createDiv({cls: 'flashcard-controls'});
 
@@ -295,13 +338,11 @@ export default class FlashyPlugin extends Plugin {
 				nextButton.disabled = currentIndex >= total - 1;
 				nextButton.addEventListener('click', () => onNavigate(currentIndex + 1));
 			}
-
 			function parseAllCards(source: string): Flashcard[] {
 				let content = source.trim();
 				const globalProperties: { bg?: string; color?: string } = {};
 
-				// CORRECTED: Removed the redundant backslashes on ']]'
-				const globalPropMatch = content.match(/^\[\[(.*?)\]]\n?/);
+				const globalPropMatch = content.match(/^\[\[(.*?)]]\n?/);
 				if (globalPropMatch) {
 					const propLine = globalPropMatch[1];
 					const props = propLine.trim().split(/\s+/);
@@ -320,7 +361,6 @@ export default class FlashyPlugin extends Plugin {
 					if (lines.length === 0) return null;
 
 					const cardProperties: { bg?: string; color?: string } = {};
-
 					if (lines[0].startsWith('[') && lines[0].endsWith(']')) {
 						const propLine = lines.shift()?.slice(1, -1);
 						if (propLine) {
@@ -335,25 +375,37 @@ export default class FlashyPlugin extends Plugin {
 
 					if (lines.length === 0) return null;
 
-					const questionLine = lines[0];
-					const fitbMatch = questionLine.match(/(.*){{(.*)}}(.*)/);
-
 					let card: Flashcard | null = null;
-					if (fitbMatch && fitbMatch[2]) {
-						const [_, q1, answer, q2] = fitbMatch;
-						card = {
-							type: 'fill-in-the-blank',
-							question: q1.trim(), questionPartTwo: q2.trim() || undefined, answer: answer.trim(),
-						} as FillInTheBlankCard;
-					} else if (lines.length > 1) {
-						const answers = lines.slice(1).map(line => ({
-							text: line.trim().startsWith('=') ? line.trim().substring(1).trim() : line.trim(),
-							isCorrect: line.trim().startsWith('='),
-						}));
-						if (answers.some(a => a.isCorrect)) {
+
+					// MODIFIED: This logic is updated for the new Q&A syntax.
+					const qaSeparatorIndex = lines.findIndex(line => line.trim().startsWith('==='));
+					if (qaSeparatorIndex > -1) {
+						const question = lines.slice(0, qaSeparatorIndex).join('\n').trim();
+						// Get the answer from the same line as the separator
+						const answer = lines[qaSeparatorIndex].trim().substring(3).trim();
+
+						if (question && answer) {
+							card = { type: 'qa', question, answer } as QACard;
+						}
+					} else {
+						const questionLine = lines[0];
+						const fitbMatch = questionLine.match(/(.*){{(.*)}}(.*)/);
+						if (fitbMatch && fitbMatch[2]) {
+							const [_, q1, answer, q2] = fitbMatch;
 							card = {
-								type: 'multiple-choice', question: questionLine.trim(), answers: answers,
-							} as MultipleChoiceCard;
+								type: 'fill-in-the-blank',
+								question: q1.trim(), questionPartTwo: q2.trim() || undefined, answer: answer.trim(),
+							} as FillInTheBlankCard;
+						} else if (lines.length > 1) {
+							const answers = lines.slice(1).map(line => ({
+								text: line.trim().startsWith('=') ? line.trim().substring(1).trim() : line.trim(),
+								isCorrect: line.trim().startsWith('='),
+							}));
+							if (answers.some(a => a.isCorrect)) {
+								card = {
+									type: 'multiple-choice', question: questionLine.trim(), answers: answers,
+								} as MultipleChoiceCard;
+							}
 						}
 					}
 
@@ -382,46 +434,42 @@ export default class FlashyPlugin extends Plugin {
 	}
 }
 
-// Replace the entire old Modal class in your main.ts file with this new one.
-
 class FlashcardCreatorModal extends Modal {
 	// --- STATE MANAGEMENT ---
 	private cards: any[] = [];
 	private editingIndex: number = 0;
-	private onSubmit: (result: string) => void;
+	private readonly onSubmit: (result: string) => void;
+	private settings: FlashyPluginSettings;
 
-	constructor(app: App, onSubmit: (result: string) => void) {
+	constructor(app: App, settings: FlashyPluginSettings, onSubmit: (result: string) => void) {
 		super(app);
+		this.settings = settings;
 		this.onSubmit = onSubmit;
-		// Start with one blank card
 		this.cards.push(this.getEmptyCardData());
 	}
 
-	// Helper to get a clean object for a new card's data
 	getEmptyCardData() {
 		return {
-			cardType: 'multiple-choice',
+			// MODIFIED: Uses the setting for the default type
+			cardType: this.settings.defaultModalCardType,
 			question: '',
 			correctAnswers: '',
 			incorrectAnswers: '',
-			// NEW: A single field for the full text of a fill-in-the-blank card
 			fitbText: '',
+			qaAnswer: '', // NEW: Field for the Q&A answer
 			bgColor: '',
 			textColor: '',
 		};
 	}
 
-	// This is the main render function for the entire modal
 	renderContent() {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl("h2", { text: `Editing Flashcard #${this.editingIndex + 1} of ${this.cards.length}` });
+		contentEl.createEl("h2", { text: `Editing Flashcard ${this.editingIndex + 1} of ${this.cards.length}` });
 
-		// Renders the form for the card at the current editingIndex
 		this.renderCardForm(contentEl.createDiv());
 
-		// --- ACTION BUTTONS ---
 		new Setting(contentEl)
 			.addButton(button => button
 				.setButtonText("Previous Card")
@@ -455,7 +503,6 @@ class FlashcardCreatorModal extends Modal {
 				}));
 	}
 
-	// This function builds the form and binds it to the current card's data object
 	renderCardForm(container: HTMLElement) {
 		const cardData = this.cards[this.editingIndex];
 
@@ -464,52 +511,57 @@ class FlashcardCreatorModal extends Modal {
 			.addDropdown(dropdown => dropdown
 				.addOption('multiple-choice', 'Multiple Choice')
 				.addOption('fill-in-the-blank', 'Fill-in-the-Blank')
+				.addOption('qa', 'Question/Answer') // NEW: Q&A option
 				.setValue(cardData.cardType)
 				.onChange(value => {
 					cardData.cardType = value;
-					this.renderContent(); // Re-render to show the correct form fields
+					this.renderContent();
 				}));
-
-		// --- DYNAMIC FORM FIELDS ---
 
 		if (cardData.cardType === 'multiple-choice') {
 			new Setting(container)
 				.setName('Question')
-				.addText(text => text
-					.setPlaceholder('What is the capital of France?')
-					.setValue(cardData.question)
-					.onChange(value => cardData.question = value));
+				.addText(text => text.setPlaceholder('e.g., Which layer is the Network layer?').setValue(cardData.question).onChange(value => cardData.question = value));
 
 			new Setting(container)
-				.setName('Correct Answer(s)')
-				.setDesc("Enter one correct answer per line.")
-				.addTextArea(text => text
-					.setPlaceholder("Paris")
-					.setValue(cardData.correctAnswers)
-					.onChange(value => cardData.correctAnswers = value)
-					.inputEl.rows = 4);
+				.setName('Correct Answer(s)').setDesc("One answer per line.")
+				.addTextArea(text => {
+					text.setPlaceholder("e.g., Layer 3").setValue(cardData.correctAnswers).onChange(value => cardData.correctAnswers = value);
+					text.inputEl.rows = 4;
+				});
 
 			new Setting(container)
-				.setName('Incorrect Answer(s)')
-				.setDesc("Enter one incorrect answer per line.")
-				.addTextArea(text => text
-					.setPlaceholder("Washington\nLondon\nBerlin")
-					.setValue(cardData.incorrectAnswers)
-					.onChange(value => cardData.incorrectAnswers = value)
-					.inputEl.rows = 4);
-		} else { // Fill-in-the-Blank
-			// NEW: A single text area for the entire fill-in-the-blank card
+				.setName('Incorrect Answer(s)').setDesc("One answer per line.")
+				.addTextArea(text => {
+					text.setPlaceholder("e.g., Layer 2\nLayer 7").setValue(cardData.incorrectAnswers).onChange(value => cardData.incorrectAnswers = value);
+					text.inputEl.rows = 4;
+				});
+		} else if (cardData.cardType === 'fill-in-the-blank') {
 			new Setting(container)
-				.setName('Full Text')
-				.setDesc("Type the full sentence and wrap the answer in {{double curly braces}}.")
-				.addTextArea(text => text
-					.setPlaceholder("The city of {{Paris}} is the capital of France")
-					.setValue(cardData.fitbText)
-					.onChange(value => cardData.fitbText = value)
-					.inputEl.rows = 4);
+				.setName('Full Text').setDesc("Wrap the answer in {{double curly braces}}.")
+				.addTextArea(text => {
+					text.setPlaceholder("e.g., The OSI model has {{seven}} layers.").setValue(cardData.fitbText).onChange(value => cardData.fitbText = value);
+					text.inputEl.rows = 4;
+				});
+		} else { // NEW: Form for Q&A card type
+			new Setting(container)
+				.setName("Question")
+				.addTextArea(text => {
+					text.setPlaceholder("e.g., What does the 'A' in CIA Triad stand for?")
+						.setValue(cardData.question)
+						.onChange(value => cardData.question = value)
+					text.inputEl.rows = 4;
+				});
+			new Setting(container)
+				.setName("Answer")
+				.addTextArea(text => {
+					text.setPlaceholder("e.g., Availability")
+						.setValue(cardData.qaAnswer)
+						.onChange(value => cardData.qaAnswer = value)
+					text.inputEl.rows = 4;
+				});
 		}
 
-		// --- STYLE INPUTS ---
 		new Setting(container)
 			.setName('Custom Background Color').setDesc("(Optional)")
 			.addText(text => text.setValue(cardData.bgColor).onChange(value => cardData.bgColor = value));
@@ -518,11 +570,9 @@ class FlashcardCreatorModal extends Modal {
 			.addText(text => text.setValue(cardData.textColor).onChange(value => cardData.textColor = value));
 	}
 
-	// This function now builds the final string from the array of card data objects
 	buildDeckString(): string {
 		return this.cards
-			// Filter out any cards that are completely empty
-			.filter(cardData => cardData.question.trim() !== "" || cardData.fitbText.trim() !== "")
+			.filter(cardData => (cardData.question && cardData.question.trim() !== "") || (cardData.fitbText && cardData.fitbText.trim() !== ""))
 			.map(cardData => {
 				let cardString = '';
 				const props = [];
@@ -532,14 +582,19 @@ class FlashcardCreatorModal extends Modal {
 					cardString += `[${props.join(' ')}]\n`;
 				}
 
-				if (cardData.cardType === 'multiple-choice') {
-					cardString += `${cardData.question}\n`;
-					const correct = cardData.correctAnswers.trim().split('\n').map((ans: string) => `=${ans.trim()}`);
-					const incorrect = cardData.incorrectAnswers.trim().split('\n').map((ans: string) => ans.trim());
-					cardString += [...correct, ...incorrect].filter(Boolean).join('\n');
-				} else {
-					// For FITB, we just use the full text provided by the user
-					cardString += cardData.fitbText;
+				switch (cardData.cardType) {
+					case 'multiple-choice':
+						cardString += `${cardData.question}\n`;
+						const correct = cardData.correctAnswers.trim().split('\n').map((ans: string) => `=${ans.trim()}`);
+						const incorrect = cardData.incorrectAnswers.trim().split('\n').map((ans: string) => ans.trim());
+						cardString += [...correct, ...incorrect].filter(Boolean).join('\n');
+						break;
+					case 'fill-in-the-blank':
+						cardString += cardData.fitbText;
+						break;
+					case 'qa':
+						cardString += `${cardData.question}\n===${cardData.qaAnswer}`;
+						break;
 				}
 				return cardString;
 			}).join('\n---\n');
@@ -564,25 +619,51 @@ class FlashySettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 		containerEl.createEl('h2', { text: 'Settings for Flashy' });
+
+		// --- BEHAVIOR ---
+		containerEl.createEl('h3', { text: 'Behavior' });
 		new Setting(containerEl)
 			.setName('Shuffle card order')
-			.setDesc('If enabled, the order of the flashcards within a block will be randomized each time the note is loaded.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.shuffleCards)
-				.onChange(async (value) => {
-					this.plugin.settings.shuffleCards = value;
-					await this.plugin.saveSettings();
-					this.app.workspace.updateOptions();
-				}));
+			.setDesc('Randomize the order of cards within a block each session.')
+			.addToggle(toggle => toggle.setValue(this.plugin.settings.shuffleCards).onChange(async (value) => {
+				this.plugin.settings.shuffleCards = value; await this.plugin.saveSettings(); this.app.workspace.updateOptions();
+			}));
 		new Setting(containerEl)
 			.setName('Shuffle answer choices')
-			.setDesc('If enabled, the order of the multiple-choice answers will be randomized for each card.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.shuffleAnswers)
-				.onChange(async (value) => {
-					this.plugin.settings.shuffleAnswers = value;
+			.setDesc('Randomize the order of answers for multiple-choice cards.')
+			.addToggle(toggle => toggle.setValue(this.plugin.settings.shuffleAnswers).onChange(async (value) => {
+				this.plugin.settings.shuffleAnswers = value; await this.plugin.saveSettings(); this.app.workspace.updateOptions();
+			}));
+		new Setting(containerEl)
+			.setName('Auto-advance on correct')
+			.setDesc('Automatically move to the next card after a correct answer.')
+			.addToggle(toggle => toggle.setValue(this.plugin.settings.autoAdvance).onChange(async (value) => {
+				this.plugin.settings.autoAdvance = value; await this.plugin.saveSettings();
+			}));
+		new Setting(containerEl)
+			.setName('Auto-advance delay (ms)')
+			.setDesc('The delay in milliseconds before advancing to the next card.')
+			.addText(text => text.setValue(String(this.plugin.settings.autoAdvanceDelay)).onChange(async (value) => {
+				const delay = parseInt(value);
+				if (!isNaN(delay)) {
+					this.plugin.settings.autoAdvanceDelay = delay;
 					await this.plugin.saveSettings();
-					this.app.workspace.updateOptions();
+				}
+			}));
+
+		// --- CARD CREATION ---
+		containerEl.createEl('h3', { text: 'Card Creation' });
+		new Setting(containerEl)
+			.setName('Default card type in modal')
+			.setDesc('Choose the default card type when opening the card creation modal.')
+			.addDropdown(dropdown => dropdown
+				.addOption('multiple-choice', 'Multiple Choice')
+				.addOption('fill-in-the-blank', 'Fill-in-the-Blank')
+				.addOption('qa', 'Question/Answer')
+				.setValue(this.plugin.settings.defaultModalCardType)
+				.onChange(async (value) => {
+					this.plugin.settings.defaultModalCardType = value as any;
+					await this.plugin.saveSettings();
 				}));
 	}
 }
