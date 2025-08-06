@@ -45,29 +45,28 @@ export default class FlashyPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.addRibbonIcon('blocks', 'Create Flashy Cards', () => {
-			// Check if there is an active editor
+		this.addRibbonIcon('blocks', 'Create Flashy Card', () => {
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+
 			if (view) {
 				// Check the current mode of the view
-				if (view.getMode() === 'source') {
-					// If we're in editing view, open the modal and pass it a callback function
+				if (view.getMode() === 'source') { // 'source' is Editing View
+					// If we're in Editing View, open the modal as normal.
 					new FlashcardCreatorModal(this.app, (result) => {
 						if (result) {
-							const editor = view.editor;
-							// Insert the generated flashcard text into the note
-							editor.replaceSelection(`\n\`\`\`flashy\n${result}\n\`\`\`\n`);
+							view.editor.replaceSelection(`\n\`\`\`flashy\n${result}\n\`\`\`\n`);
 						}
 					}).open();
 				} else {
-					// If we're in reading view, show a notice
-					new Notice("Please switch to Editing View to create a flashcard.")
+					// If we're in Reading View ('preview'), show a notice.
+					new Notice("Please switch to Editing View to create a flashcard.");
 				}
 			} else {
-				// If no note is open, show a notice
-				new Notice("Please open a note to create a flashcard.")
+				// If no note is open at all.
+				new Notice("Please open a note to create a flashcard.");
 			}
 		});
+
 
 		this.registerMarkdownCodeBlockProcessor('flashy', (source, el, ctx) => {
 			const settings = this.settings;
@@ -302,7 +301,7 @@ export default class FlashyPlugin extends Plugin {
 				const globalProperties: { bg?: string; color?: string } = {};
 
 				// CORRECTED: Removed the redundant backslashes on ']]'
-				const globalPropMatch = content.match(/^\[\[(.*?)]]\n?/);
+				const globalPropMatch = content.match(/^\[\[(.*?)\]]\n?/);
 				if (globalPropMatch) {
 					const propLine = globalPropMatch[1];
 					const props = propLine.trim().split(/\s+/);
@@ -383,15 +382,18 @@ export default class FlashyPlugin extends Plugin {
 	}
 }
 
+// Replace the entire old Modal class in your main.ts file with this new one.
+
 class FlashcardCreatorModal extends Modal {
 	// --- STATE MANAGEMENT ---
 	private cards: any[] = [];
 	private editingIndex: number = 0;
-	private readonly onSubmit: (result: string) => void;
+	private onSubmit: (result: string) => void;
 
 	constructor(app: App, onSubmit: (result: string) => void) {
 		super(app);
 		this.onSubmit = onSubmit;
+		// Start with one blank card
 		this.cards.push(this.getEmptyCardData());
 	}
 
@@ -402,6 +404,7 @@ class FlashcardCreatorModal extends Modal {
 			question: '',
 			correctAnswers: '',
 			incorrectAnswers: '',
+			// NEW: A single field for the full text of a fill-in-the-blank card
 			fitbText: '',
 			bgColor: '',
 			textColor: '',
@@ -413,7 +416,7 @@ class FlashcardCreatorModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl("h2", { text: `Editing Flashcard ${this.editingIndex + 1} of ${this.cards.length}` });
+		contentEl.createEl("h2", { text: `Editing Flashcard #${this.editingIndex + 1} of ${this.cards.length}` });
 
 		// Renders the form for the card at the current editingIndex
 		this.renderCardForm(contentEl.createDiv());
@@ -473,7 +476,7 @@ class FlashcardCreatorModal extends Modal {
 			new Setting(container)
 				.setName('Question')
 				.addText(text => text
-					.setPlaceholder('What is 5+5?')
+					.setPlaceholder('What is the capital of France?')
 					.setValue(cardData.question)
 					.onChange(value => cardData.question = value));
 
@@ -481,7 +484,7 @@ class FlashcardCreatorModal extends Modal {
 				.setName('Correct Answer(s)')
 				.setDesc("Enter one correct answer per line.")
 				.addTextArea(text => text
-					.setPlaceholder("10")
+					.setPlaceholder("Paris")
 					.setValue(cardData.correctAnswers)
 					.onChange(value => cardData.correctAnswers = value)
 					.inputEl.rows = 4);
@@ -490,17 +493,17 @@ class FlashcardCreatorModal extends Modal {
 				.setName('Incorrect Answer(s)')
 				.setDesc("Enter one incorrect answer per line.")
 				.addTextArea(text => text
-					.setPlaceholder("5\n3\n8")
+					.setPlaceholder("Washington\nLondon\nBerlin")
 					.setValue(cardData.incorrectAnswers)
 					.onChange(value => cardData.incorrectAnswers = value)
 					.inputEl.rows = 4);
-		} else {
-			// Fill-in-the-Blank
+		} else { // Fill-in-the-Blank
+			// NEW: A single text area for the entire fill-in-the-blank card
 			new Setting(container)
 				.setName('Full Text')
 				.setDesc("Type the full sentence and wrap the answer in {{double curly braces}}.")
 				.addTextArea(text => text
-					.setPlaceholder("10+{{10}}=20")
+					.setPlaceholder("The city of {{Paris}} is the capital of France")
 					.setValue(cardData.fitbText)
 					.onChange(value => cardData.fitbText = value)
 					.inputEl.rows = 4);
@@ -550,7 +553,6 @@ class FlashcardCreatorModal extends Modal {
 		this.contentEl.empty();
 	}
 }
-
 
 class FlashySettingTab extends PluginSettingTab {
 	plugin: FlashyPlugin;
