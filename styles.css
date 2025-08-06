@@ -1,8 +1,201 @@
-/*
+/* --- Default Theme Variables (Light Theme) --- */
+:root {
+	--flashy-bg: #f5f6fa;
+	--flashy-border: #dcdde1;
+	--flashy-shadow: rgba(45, 52, 54, 0.1);
+	--flashy-border-radius: 12px;
+	--flashy-question-text: #2f3542;
+	--flashy-answer-text: #57606f;
+	--flashy-muted-text: #8395a7;
+	--flashy-accent: #0984e3;
+	--flashy-button-bg: #ffffff;
+	--flashy-button-hover-bg: #f1f2f6;
+	--flashy-correct-bg: #27ae60;
+	--flashy-correct-text: #ffffff;
+	--flashy-incorrect-bg: #c0392b;
+	--flashy-incorrect-text: #ffffff;
+}
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+/* --- Dark Theme Overrides --- */
+body.theme-dark {
+	--flashy-bg: #2f3542;
+	--flashy-border: #4a515f;
+	--flashy-shadow: rgba(0, 0, 0, 0.2);
+	--flashy-question-text: #f5f6fa;
+	--flashy-answer-text: #dcdde1;
+	--flashy-muted-text: #718093;
+	--flashy-accent: #74b9ff;
+	--flashy-button-bg: #353b48;
+	--flashy-button-hover-bg: #4a515f;
+}
 
-If your plugin does not need CSS, delete this file.
+/* --- Keyframe Animations --- */
+@keyframes shake {
+	10%, 90% { transform: translate3d(-1px, 0, 0); }
+	20%, 80% { transform: translate3d(2px, 0, 0); }
+	30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+	40%, 60% { transform: translate3d(4px, 0, 0); }
+}
 
-*/
+/* --- Component Styles --- */
+
+.flashcard-container {
+	background-color: var(--flashy-bg);
+	border: 1px solid var(--flashy-border);
+	border-radius: var(--flashy-border-radius);
+	padding: 24px;
+	margin: 1em 0;
+	box-shadow: 0 4px 12px var(--flashy-shadow);
+	display: flex;
+	flex-direction: column;
+	min-height: 280px;
+	position: relative;
+}
+
+.flashcard-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	gap: 16px;
+	margin-bottom: 20px;
+	padding-bottom: 16px;
+	border-bottom: 1px solid var(--flashy-border);
+}
+
+.flashcard-question {
+	font-size: 1.5em;
+	font-weight: 600;
+	margin: 0;
+	color: var(--flashy-question-text);
+	flex-grow: 1;
+}
+
+.flashcard-body {
+	flex-grow: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+.flashcard-buttons {
+	display: flex;
+	flex-wrap: wrap; /* This is the key property */
+	justify-content: center; /* This nicely centers the buttons */
+	gap: 12px;
+}
+
+.flashcard-answer {
+	background-color: var(--flashy-button-bg);
+	border: 1px solid var(--flashy-border);
+	border-radius: 8px;
+	padding: 12px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	color: var(--flashy-answer-text);
+	font-size: 1em;
+	text-align: center;
+	position: relative;
+}
+.flashcard-answer:hover:not(:disabled) {
+	background-color: var(--flashy-button-hover-bg);
+	border-color: var(--flashy-accent);
+}
+
+/* MODIFIED: This brings back the solid background colors for feedback */
+.flashcard-answer.correct {
+	background-color: var(--flashy-correct-bg);
+	border-color: var(--flashy-correct-bg);
+	color: var(--flashy-correct-text);
+	font-weight: bold;
+}
+.flashcard-answer.incorrect {
+	background-color: var(--flashy-incorrect-bg);
+	border-color: var(--flashy-incorrect-bg);
+	color: var(--flashy-incorrect-text);
+	font-weight: bold;
+	animation: shake 0.6s;
+}
+.flashy-animations-disabled body .flashcard-answer.incorrect {
+	animation: none;
+}
+.flashcard-answer:disabled {
+	cursor: not-allowed;
+	opacity: 0.9;
+}
+
+.flashcard-controls {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding-top: 16px;
+	margin-top: auto;
+}
+
+.flashcard-header .flashcard-reset {
+	flex-shrink: 0;
+}
+
+.flashy-icon-button {
+	background-color: transparent;
+	border: none;
+	color: var(--flashy-muted-text);
+	cursor: pointer;
+	padding: 8px;
+	border-radius: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 36px;
+	height: 36px;
+	transition: all 0.2s ease;
+}
+.flashy-icon-button:hover:not(:disabled) {
+	background-color: var(--flashy-button-hover-bg);
+	color: var(--flashy-question-text);
+}
+.flashy-icon-button:disabled {
+	opacity: 0.3;
+	cursor: not-allowed;
+}
+.flashy-icon-button svg {
+	width: 20px;
+	height: 20px;
+}
+
+.flashcard-middle-controls {
+	font-size: 0.9em;
+	color: var(--flashy-muted-text);
+	min-width: 70px;
+	text-align: center;
+}
+
+.flashcard-feedback { text-align: center; font-weight: bold; margin-top: 16px; padding: 8px; border-radius: 6px; background-color: transparent; }
+.flashcard-feedback.correct { color: var(--flashy-correct-bg); }
+.flashcard-feedback.incorrect { color: var(--flashy-incorrect-bg); }
+
+.flashcard-fill-container { display: flex; gap: 10px; align-items: center; }
+.flashcard-fill-input { flex-grow: 1; font-size: 1em; text-align: center; }
+.flashcard-fill-input.correct { border-color: var(--flashy-correct-bg) !important; }
+.flashcard-fill-input.incorrect { border-color: var(--flashy-incorrect-bg) !important; }
+.flashcard-fill-submit { border: none; color: var(--flashy-correct-text); background-color: var(--flashy-accent); }
+.flashcard-correct-answer-reveal { margin-top: 1.5em; font-size: 0.9em; text-align: center; color: var(--text-faint); }
+.flashcard-correct-answer-reveal span { font-weight: bold; padding: 2px 6px; border-radius: 4px; color: var(--flashy-correct-text); background-color: var(--flashy-correct-bg); }
+
+.flashcard-summary { text-align: center; padding: 20px; margin: auto; }
+.flashcard-summary h3 { margin-top: 0; color: var(--flashy-question-text); }
+.flashcard-summary p { color: var(--flashy-answer-text); }
+.flashcard-summary .flashcard-reset {
+	display: inline-flex;
+	background-color: var(--flashy-accent);
+	color: var(--flashy-correct-text);
+	border: none;
+	font-weight: bold;
+	padding: 10px 20px;
+	margin-top: 1em;
+	width: auto;
+	height: auto;
+	border-radius: 5px;
+}
+.flashcard-summary .flashcard-reset:hover {
+	filter: brightness(1.1);
+}
