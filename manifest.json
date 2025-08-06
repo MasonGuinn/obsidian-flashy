@@ -1,7 +1,7 @@
 {
 	"id": "flashy",
 	"name": "Flashy",
-	"version": "2.2.0",
+	"version": "2.2.1",
 	"minAppVersion": "0.15.0",
 	"description": "Creates simple flashcards from code blocks.",
 	"author": "Mason",
