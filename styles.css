@@ -48,7 +48,6 @@ body.theme-dark {
 	box-shadow: 0 4px 12px var(--flashy-shadow);
 	display: flex;
 	flex-direction: column;
-	min-height: 280px;
 	position: relative;
 }
 
@@ -82,26 +81,33 @@ body.theme-dark {
 	flex-wrap: wrap; /* This is the key property */
 	justify-content: center; /* This nicely centers the buttons */
 	gap: 12px;
+	flex-grow: 1;
 }
 
 .flashcard-answer {
 	background-color: var(--flashy-button-bg);
 	border: 1px solid var(--flashy-border);
 	border-radius: 8px;
-	padding: 12px;
 	cursor: pointer;
 	transition: all 0.2s ease;
 	color: var(--flashy-answer-text);
 	font-size: 1em;
 	text-align: center;
-	position: relative;
+	white-space: normal;
+	line-height: 1.4;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-grow: 1;
+	min-height: fit-content;
+	word-break: break-word;
+	padding: 0.5em;
 }
 .flashcard-answer:hover:not(:disabled) {
 	background-color: var(--flashy-button-hover-bg);
 	border-color: var(--flashy-accent);
 }
 
-/* MODIFIED: This brings back the solid background colors for feedback */
 .flashcard-answer.correct {
 	background-color: var(--flashy-correct-bg);
 	border-color: var(--flashy-correct-bg);
@@ -205,7 +211,6 @@ body.theme-dark {
 .qa-container {
 	display: flex;
 	flex-direction: column;
-	align-items: center;
 	justify-content: center;
 	text-align: center;
 	height: 100%;
@@ -221,6 +226,7 @@ body.theme-dark {
 
 .qa-grading-buttons {
 	display: flex;
+	justify-content: center;
 	gap: 12px;
 	margin-top: 1em;
 }
@@ -245,4 +251,15 @@ body.theme-dark {
 .qa-grading-button:disabled {
 	opacity: 0.6;
 	cursor: not-allowed;
+}
+
+.qa-container .mod-cta, .qa-grading-button {
+	display: flex;
+	font-size: 1em;
+	padding: 0.5em;
+	line-height: 1.4;
+	flex-grow: 1;
+	min-height: fit-content;
+	align-items: center;
+	white-space: normal;
 }
