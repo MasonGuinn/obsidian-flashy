@@ -1,6 +1,6 @@
 {
 	"name": "flashy",
-	"version": "2.0.0",
+	"version": "2.1.0",
 	"description": "Flashy plugin for Obsidian (https://obsidian.md)",
 	"main": "main.js",
 	"scripts": {
@@ -8,7 +8,9 @@
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
-	"keywords": ["flashcards"],
+	"keywords": [
+		"flashcards"
+	],
 	"author": "Mason Guinn",
 	"license": "MIT",
 	"devDependencies": {
