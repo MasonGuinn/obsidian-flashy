@@ -45,18 +45,24 @@ export default class FlashyPlugin extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		this.addRibbonIcon('blocks', 'Create Flashy Card', () => {
+		this.addRibbonIcon('blocks', 'Create Flashy Cards', () => {
 			// Check if there is an active editor
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (view) {
-				// Open the modal and pass it a callback function
-				new FlashcardCreatorModal(this.app, (result) => {
-					if (result) {
-						const editor = view.editor;
-						// Insert the generated flashcard text into the note
-						editor.replaceSelection(`\n\`\`\`flashy\n${result}\n\`\`\`\n`);
-					}
-				}).open();
+				// Check the current mode of the view
+				if (view.getMode() === 'source') {
+					// If we're in editing view, open the modal and pass it a callback function
+					new FlashcardCreatorModal(this.app, (result) => {
+						if (result) {
+							const editor = view.editor;
+							// Insert the generated flashcard text into the note
+							editor.replaceSelection(`\n\`\`\`flashy\n${result}\n\`\`\`\n`);
+						}
+					}).open();
+				} else {
+					// If we're in reading view, show a notice
+					new Notice("Please switch to Editing View to create a flashcard.")
+				}
 			} else {
 				// If no note is open, show a notice
 				new Notice("Please open a note to create a flashcard.")
@@ -296,7 +302,7 @@ export default class FlashyPlugin extends Plugin {
 				const globalProperties: { bg?: string; color?: string } = {};
 
 				// CORRECTED: Removed the redundant backslashes on ']]'
-				const globalPropMatch = content.match(/^\[\[(.*?)\]]\n?/);
+				const globalPropMatch = content.match(/^\[\[(.*?)]]\n?/);
 				if (globalPropMatch) {
 					const propLine = globalPropMatch[1];
 					const props = propLine.trim().split(/\s+/);
@@ -379,60 +385,65 @@ export default class FlashyPlugin extends Plugin {
 
 class FlashcardCreatorModal extends Modal {
 	// --- STATE MANAGEMENT ---
-	// We now store a list of cards to be created, and the data for the card currently being edited.
 	private cards: any[] = [];
-	private currentCardData: any; // Will hold data for the card being edited
-
-	// The callback to run when the user is finished creating the deck.
-	private onSubmit: (result: string) => void;
-
-	// A reference to the part of the modal that will be re-rendered.
-	private formEl: HTMLElement;
+	private editingIndex: number = 0;
+	private readonly onSubmit: (result: string) => void;
 
 	constructor(app: App, onSubmit: (result: string) => void) {
 		super(app);
 		this.onSubmit = onSubmit;
-		this.currentCardData = this.getEmptyCardData(); // Initialize the form for the first card
+		this.cards.push(this.getEmptyCardData());
 	}
 
-	// Helper to get a clean object for a new card
+	// Helper to get a clean object for a new card's data
 	getEmptyCardData() {
 		return {
 			cardType: 'multiple-choice',
 			question: '',
 			correctAnswers: '',
 			incorrectAnswers: '',
-			fillBlankAnswer: '',
+			fitbText: '',
 			bgColor: '',
 			textColor: '',
 		};
 	}
 
-	// onOpen now sets up the static parts of the modal (title, action buttons)
-	onOpen() {
+	// This is the main render function for the entire modal
+	renderContent() {
 		const { contentEl } = this;
 		contentEl.empty();
-		contentEl.createEl("h2", { text: `Creating Flashcard #${this.cards.length + 1}` });
 
-		// This container will hold the dynamic form for each card
-		this.formEl = contentEl.createDiv();
-		this.renderCardForm(this.formEl);
+		contentEl.createEl("h2", { text: `Editing Flashcard ${this.editingIndex + 1} of ${this.cards.length}` });
+
+		// Renders the form for the card at the current editingIndex
+		this.renderCardForm(contentEl.createDiv());
 
 		// --- ACTION BUTTONS ---
-		// These buttons are static and stay at the bottom of the modal.
 		new Setting(contentEl)
 			.addButton(button => button
-				.setButtonText("Add Another Card")
+				.setButtonText("Previous Card")
+				.setDisabled(this.editingIndex === 0)
 				.onClick(() => {
-					this.saveCurrentCard();
-					this.currentCardData = this.getEmptyCardData(); // Clear the form
-					this.onOpen(); // Re-render the whole modal to update the title and form
+					if (this.editingIndex > 0) {
+						this.editingIndex--;
+						this.renderContent();
+					}
 				}))
 			.addButton(button => button
-				.setButtonText("Finish & Insert Deck")
-				.setCta() // Makes it the primary action button
+				.setButtonText(this.editingIndex === this.cards.length - 1 ? "Add New Card" : "Next Card")
 				.onClick(() => {
-					this.saveCurrentCard();
+					this.editingIndex++;
+					if (this.editingIndex === this.cards.length) {
+						this.cards.push(this.getEmptyCardData());
+					}
+					this.renderContent();
+				}));
+
+		new Setting(contentEl)
+			.addButton(button => button
+				.setButtonText("Finish & Insert Deck")
+				.setCta()
+				.onClick(() => {
 					const deckString = this.buildDeckString();
 					if (deckString) {
 						this.onSubmit(deckString);
@@ -441,94 +452,98 @@ class FlashcardCreatorModal extends Modal {
 				}));
 	}
 
-	// This function builds the form for the *current* card being edited.
+	// This function builds the form and binds it to the current card's data object
 	renderCardForm(container: HTMLElement) {
-		container.empty();
+		const cardData = this.cards[this.editingIndex];
 
 		new Setting(container)
 			.setName('Card Type')
 			.addDropdown(dropdown => dropdown
 				.addOption('multiple-choice', 'Multiple Choice')
 				.addOption('fill-in-the-blank', 'Fill-in-the-Blank')
-				.setValue(this.currentCardData.cardType)
+				.setValue(cardData.cardType)
 				.onChange(value => {
-					this.currentCardData.cardType = value;
-					this.renderCardForm(container); // Re-render to show correct fields
+					cardData.cardType = value;
+					this.renderContent(); // Re-render to show the correct form fields
 				}));
 
-		new Setting(container)
-			.setName('Question')
-			.addText(text => text
-				.setPlaceholder('What is the capital of France?')
-				.setValue(this.currentCardData.question)
-				.onChange(value => this.currentCardData.question = value));
+		// --- DYNAMIC FORM FIELDS ---
 
-		// --- DYNAMIC ANSWER FIELDS ---
-		if (this.currentCardData.cardType === 'multiple-choice') {
+		if (cardData.cardType === 'multiple-choice') {
+			new Setting(container)
+				.setName('Question')
+				.addText(text => text
+					.setPlaceholder('What is 5+5?')
+					.setValue(cardData.question)
+					.onChange(value => cardData.question = value));
+
 			new Setting(container)
 				.setName('Correct Answer(s)')
 				.setDesc("Enter one correct answer per line.")
 				.addTextArea(text => text
-					.setPlaceholder("Paris")
-					.setValue(this.currentCardData.correctAnswers)
-					.onChange(value => this.currentCardData.correctAnswers = value)
+					.setPlaceholder("10")
+					.setValue(cardData.correctAnswers)
+					.onChange(value => cardData.correctAnswers = value)
 					.inputEl.rows = 4);
 
 			new Setting(container)
 				.setName('Incorrect Answer(s)')
 				.setDesc("Enter one incorrect answer per line.")
 				.addTextArea(text => text
-					.setPlaceholder("London\nBerlin")
-					.setValue(this.currentCardData.incorrectAnswers)
-					.onChange(value => this.currentCardData.incorrectAnswers = value)
+					.setPlaceholder("5\n3\n8")
+					.setValue(cardData.incorrectAnswers)
+					.onChange(value => cardData.incorrectAnswers = value)
 					.inputEl.rows = 4);
-		} else { // Fill-in-the-Blank
+		} else {
+			// Fill-in-the-Blank
 			new Setting(container)
-				.setName('Answer')
-				.setDesc("The text that will be hidden inside the {{brackets}}.")
-				.addText(text => text
-					.setPlaceholder("Paris")
-					.setValue(this.currentCardData.fillBlankAnswer)
-					.onChange(value => this.currentCardData.fillBlankAnswer = value));
+				.setName('Full Text')
+				.setDesc("Type the full sentence and wrap the answer in {{double curly braces}}.")
+				.addTextArea(text => text
+					.setPlaceholder("10+{{10}}=20")
+					.setValue(cardData.fitbText)
+					.onChange(value => cardData.fitbText = value)
+					.inputEl.rows = 4);
 		}
 
 		// --- STYLE INPUTS ---
 		new Setting(container)
 			.setName('Custom Background Color').setDesc("(Optional)")
-			.addText(text => text.setValue(this.currentCardData.bgColor).onChange(value => this.currentCardData.bgColor = value));
+			.addText(text => text.setValue(cardData.bgColor).onChange(value => cardData.bgColor = value));
 		new Setting(container)
 			.setName('Custom Text Color').setDesc("(Optional)")
-			.addText(text => text.setValue(this.currentCardData.textColor).onChange(value => this.currentCardData.textColor = value));
+			.addText(text => text.setValue(cardData.textColor).onChange(value => cardData.textColor = value));
 	}
 
-	// --- DATA HANDLING ---
-	saveCurrentCard() {
-		// Only save if there's actually a question
-		if (this.currentCardData.question.trim()) {
-			this.cards.push({ ...this.currentCardData });
-		}
-	}
-
+	// This function now builds the final string from the array of card data objects
 	buildDeckString(): string {
-		return this.cards.map(cardData => {
-			let cardString = '';
-			const props = [];
-			if (cardData.bgColor) props.push(`bg=${cardData.bgColor}`);
-			if (cardData.textColor) props.push(`color=${cardData.textColor}`);
-			if (props.length > 0) {
-				cardString += `[${props.join(' ')}]\n`;
-			}
+		return this.cards
+			// Filter out any cards that are completely empty
+			.filter(cardData => cardData.question.trim() !== "" || cardData.fitbText.trim() !== "")
+			.map(cardData => {
+				let cardString = '';
+				const props = [];
+				if (cardData.bgColor) props.push(`bg=${cardData.bgColor}`);
+				if (cardData.textColor) props.push(`color=${cardData.textColor}`);
+				if (props.length > 0) {
+					cardString += `[${props.join(' ')}]\n`;
+				}
 
-			if (cardData.cardType === 'multiple-choice') {
-				cardString += `${cardData.question}\n`;
-				const correct = cardData.correctAnswers.trim().split('\n').map((ans: string) => `=${ans.trim()}`);
-				const incorrect = cardData.incorrectAnswers.trim().split('\n').map((ans: string) => ans.trim());
-				cardString += [...correct, ...incorrect].filter(Boolean).join('\n');
-			} else {
-				cardString += `${cardData.question} {{${cardData.fillBlankAnswer}}}`;
-			}
-			return cardString;
-		}).join('\n---\n');
+				if (cardData.cardType === 'multiple-choice') {
+					cardString += `${cardData.question}\n`;
+					const correct = cardData.correctAnswers.trim().split('\n').map((ans: string) => `=${ans.trim()}`);
+					const incorrect = cardData.incorrectAnswers.trim().split('\n').map((ans: string) => ans.trim());
+					cardString += [...correct, ...incorrect].filter(Boolean).join('\n');
+				} else {
+					// For FITB, we just use the full text provided by the user
+					cardString += cardData.fitbText;
+				}
+				return cardString;
+			}).join('\n---\n');
+	}
+
+	onOpen() {
+		this.renderContent();
 	}
 
 	onClose() {

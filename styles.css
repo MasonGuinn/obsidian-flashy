@@ -199,3 +199,7 @@ body.theme-dark {
 .flashcard-summary .flashcard-reset:hover {
 	filter: brightness(1.1);
 }
+
+.modal-content h2 {
+	margin-block-start: 0;
+}
