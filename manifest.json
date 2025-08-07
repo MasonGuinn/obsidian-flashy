@@ -1,9 +1,9 @@
 {
 	"id": "flashy",
 	"name": "Flashy",
-	"version": "2.2.3",
+	"version": "1.0.0",
 	"minAppVersion": "0.15.0",
-	"description": "Creates simple flashcards from code blocks.",
+	"description": "Create and review beautiful, interactive flashcards & decks. Supports multiple-choice, fill-in-the-blank, and Q&A cards using the ribbon or intuitive syntax.",
 	"author": "Mason",
 	"authorUrl": "https://obsidian.md",
 	"fundingUrl": {
