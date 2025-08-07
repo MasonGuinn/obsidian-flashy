@@ -5,7 +5,7 @@
 	"minAppVersion": "0.15.0",
 	"description": "Create and review beautiful, interactive flashcards & decks. Supports multiple-choice, fill-in-the-blank, and Q&A cards using the ribbon or intuitive syntax.",
 	"author": "Mason",
-	"authorUrl": "https://obsidian.md",
+	"authorUrl": "https://github.com/MasonGuinn",
 	"fundingUrl": {
 		"Buy Me a Coffee": "https://buymeacoffee.com/masonguinn",
 		"GitHub Sponsor": "https://github.com/sponsors/MasonGuinn"
