@@ -1,6 +1,6 @@
 {
 	"name": "flashy",
-	"version": "2.2.2",
+	"version": "2.2.3",
 	"description": "Flashy plugin for Obsidian (https://obsidian.md)",
 	"main": "main.js",
 	"scripts": {
