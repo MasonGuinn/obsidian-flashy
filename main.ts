@@ -11,29 +11,56 @@ import {
 	Notice
 } from 'obsidian';
 
-// --- DATA STRUCTURES ---
+/**
+ * Base interface for all flashcard types.
+ * Defines common properties like type, question, and custom styling.
+ */
 interface BaseFlashcard {
 	type: 'multiple-choice' | 'fill-in-the-blank' | 'qa';
 	question: string;
 	customBackgroundColor?: string;
 	customTextColor?: string;
 }
+
+/**
+ * Represents a multiple-choice flashcard.
+ * Extends BaseFlashcard with an array of possible answers, each with text and a correctness flag.
+ */
 interface MultipleChoiceCard extends BaseFlashcard {
 	type: 'multiple-choice';
 	answers: { text: string; isCorrect: boolean; }[];
 }
+
+/**
+ * Represents a fill-in-the-blank flashcard.
+ * Extends BaseFlashcard with an answer and an optional second part for the question
+ * (used when the blank is in the middle of a sentence).
+ */
 interface FillInTheBlankCard extends BaseFlashcard {
 	type: 'fill-in-the-blank';
 	questionPartTwo?: string;
 	answer: string;
 }
+
+/**
+ * Represents a Question/Answer flashcard.
+ * Extends BaseFlashcard with a direct answer to the question.
+ */
 interface QACard extends BaseFlashcard {
 	type: 'qa';
 	answer: string;
 }
 
+/**
+ * Union type for all possible flashcard types.
+ */
 type Flashcard = MultipleChoiceCard | FillInTheBlankCard | QACard;
 
+/**
+ * Interface for the plugin's settings.
+ * Defines configurable options such as card shuffling, auto-advancement,
+ * and default card types for the creation modal.
+ */
 interface FlashyPluginSettings {
 	shuffleCards: boolean;
 	shuffleAnswers: boolean;
@@ -42,6 +69,9 @@ interface FlashyPluginSettings {
 	defaultModalCardType: 'multiple-choice' | 'fill-in-the-blank' | 'qa';
 }
 
+/**
+ * Default settings for the Flashy plugin.
+ */
 const DEFAULT_SETTINGS: FlashyPluginSettings = {
 	shuffleCards: false,
 	shuffleAnswers: true,
@@ -50,12 +80,23 @@ const DEFAULT_SETTINGS: FlashyPluginSettings = {
 	defaultModalCardType: 'multiple-choice',
 }
 
+/**
+ * Main plugin class for Flashy.
+ * Handles plugin lifecycle, settings, ribbon icon, and markdown code block processing.
+ */
 export default class FlashyPlugin extends Plugin {
 	settings: FlashyPluginSettings;
 
+	/**
+	 * Called when the plugin is loaded.
+	 */
 	async onload() {
 		await this.loadSettings();
 
+		/**
+		 * Registers a ribbon icon to the Obsidian UI.
+		 * Clicking this icon opens a modal for creating new flashcards.
+		 */
 		this.addRibbonIcon('blocks', 'Create Flashy Cards', () => {
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (view) {
@@ -73,6 +114,10 @@ export default class FlashyPlugin extends Plugin {
 			}
 		});
 
+		/**
+		 * Registers a markdown code block processor for 'flashy' blocks.
+		 * This function is responsible for rendering and managing the interactive flashcards.
+		 */
 		this.registerMarkdownCodeBlockProcessor('flashy', (source, el, ctx) => {
 			const settings = this.settings;
 			let currentCardIndex = 0;
@@ -91,6 +136,10 @@ export default class FlashyPlugin extends Plugin {
 			const child = new MarkdownRenderChild(mainContainer);
 			ctx.addChild(child);
 
+			/**
+			 * Handles keyboard navigation and interaction within the flashcard block.
+			 * @param event The KeyboardEvent object.
+			 */
 			const handleKeyDown = (event: KeyboardEvent) => {
 				const activeEl = el.win.document.activeElement;
 				const isTyping = activeEl && activeEl.tagName === 'INPUT';
@@ -126,6 +175,10 @@ export default class FlashyPlugin extends Plugin {
 			};
 			child.registerDomEvent(el.win, 'keydown', handleKeyDown);
 
+			/**
+			 * Callback function invoked when a card is graded (answered).
+			 * Updates statistics and handles auto-advancement.
+			 */
 			const onGraded = (isCorrect: boolean) => {
 				if (answeredCardIndexes.has(currentCardIndex)) {
 					return;
@@ -147,6 +200,11 @@ export default class FlashyPlugin extends Plugin {
 				}
 			};
 
+			/**
+			 * Renders a specific flashcard based on its index.
+			 * Clears the container and renders the appropriate card type and controls.
+			 * @param index The index of the card to render.
+			 */
 			function renderCard(index: number) {
 				currentCardIndex = index;
 				mainContainer.empty();
@@ -181,6 +239,9 @@ export default class FlashyPlugin extends Plugin {
 				renderControls(mainContainer, index, cardsToRender.length, renderCard);
 			}
 
+			/**
+			 * Renders the summary screen after all cards have been answered.
+			 */
 			function renderSummary() {
 				mainContainer.empty();
 				const summaryEl = mainContainer.createDiv({cls: 'flashcard-summary'});
@@ -199,6 +260,11 @@ export default class FlashyPlugin extends Plugin {
 
 			renderCard(0);
 
+			/**
+			 * Renders the header section of a flashcard, including the question and a reset button.
+			 * @param container The HTMLElement to append the header to.
+			 * @param card The Flashcard data.
+			 */
 			function renderHeader(container: HTMLElement, card: Flashcard) {
 				const header = container.createDiv({cls: 'flashcard-header'});
 
@@ -219,6 +285,12 @@ export default class FlashyPlugin extends Plugin {
 				});
 			}
 
+			/**
+			 * Renders the body for a multiple-choice flashcard.
+			 * @param container The HTMLElement to append the body to.
+			 * @param card The MultipleChoiceCard data.
+			 * @param onGraded Callback function to call when the card is graded.
+			 */
 			function renderMultipleChoiceBody(container: HTMLElement, card: MultipleChoiceCard, onGraded: (correct: boolean) => void) {
 				const buttonsContainer = container.createDiv({ cls: 'flashcard-buttons' });
 				const answers = card.answers;
@@ -261,6 +333,12 @@ export default class FlashyPlugin extends Plugin {
 				});
 			}
 
+			/**
+			 * Renders the body for a fill-in-the-blank flashcard.
+			 * @param container The HTMLElement to append the body to.
+			 * @param card The FillInTheBlankCard data.
+			 * @param onGraded Callback function to call when the card is graded.
+			 */
 			function renderFillInTheBlankBody(container: HTMLElement, card: FillInTheBlankCard, onGraded: (correct: boolean) => void) {
 				const formContainer = container.createDiv({cls: 'flashcard-fill-container'});
 				const input = new TextComponent(formContainer).setPlaceholder("Type your answer...").inputEl;
@@ -289,6 +367,12 @@ export default class FlashyPlugin extends Plugin {
 				});
 			}
 
+			/**
+			 * Renders the body for a Question/Answer flashcard.
+			 * @param container The HTMLElement to append the body to.
+			 * @param card The QACard data.
+			 * @param onGraded Callback function to call when the card is graded.
+			 */
 			function renderQABody(container: HTMLElement, card: QACard, onGraded: (correct: boolean) => void) {
 				const qaContainer = container.createDiv({ cls: 'qa-container' });
 				const answerContainer = qaContainer.createDiv({ cls: 'qa-answer-container', text: card.answer });
@@ -318,6 +402,13 @@ export default class FlashyPlugin extends Plugin {
 				});
 			}
 
+			/**
+			 * Renders navigation controls (previous/next buttons and progress indicator).
+			 * @param container The HTMLElement to append the controls to.
+			 * @param currentIndex The current index of the displayed card.
+			 * @param total The total number of cards.
+			 * @param onNavigate Callback function to navigate to a new card index.
+			 */
 			function renderControls(container: HTMLElement, currentIndex: number, total: number, onNavigate: (newIndex: number) => void) {
 				const controls = container.createDiv({cls: 'flashcard-controls'});
 
@@ -338,6 +429,11 @@ export default class FlashyPlugin extends Plugin {
 				nextButton.disabled = currentIndex >= total - 1;
 				nextButton.addEventListener('click', () => onNavigate(currentIndex + 1));
 			}
+
+			/**
+			 * Parses the source string of a flashy code block into an array of Flashcard objects.
+			 * @param source The raw string content of the flashy code block.
+			 */
 			function parseAllCards(source: string): Flashcard[] {
 				let content = source.trim();
 				const globalProperties: { bg?: string; color?: string } = {};
@@ -377,11 +473,9 @@ export default class FlashyPlugin extends Plugin {
 
 					let card: Flashcard | null = null;
 
-					// MODIFIED: This logic is updated for the new Q&A syntax.
 					const qaSeparatorIndex = lines.findIndex(line => line.trim().startsWith('==='));
 					if (qaSeparatorIndex > -1) {
 						const question = lines.slice(0, qaSeparatorIndex).join('\n').trim();
-						// Get the answer from the same line as the separator
 						const answer = lines[qaSeparatorIndex].trim().substring(3).trim();
 
 						if (question && answer) {
@@ -423,24 +517,42 @@ export default class FlashyPlugin extends Plugin {
 		this.addSettingTab(new FlashySettingTab(this.app, this));
 	}
 
+	/**
+	 * Called when the plugin is unloaded.
+	 */
 	onunload() {}
 
+	/**
+	 * Loads the plugin settings from storage.
+	 */
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
 
+	/**
+	 * Saves the plugin settings to storage.
+	 */
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
 }
 
+/**
+ * Modal for creating and editing flashcards.
+ * Allows users to define multiple-choice, fill-in-the-blank, or Q&A cards.
+ */
 class FlashcardCreatorModal extends Modal {
-	// --- STATE MANAGEMENT ---
 	private cards: any[] = [];
 	private editingIndex: number = 0;
 	private readonly onSubmit: (result: string) => void;
 	private settings: FlashyPluginSettings;
 
+	/**
+	 * Creates an instance of FlashcardCreatorModal.
+	 * @param app The Obsidian App instance.
+	 * @param settings The plugin settings, used for default card type.
+	 * @param onSubmit Callback function to execute when the deck is finished and inserted.
+	 */
 	constructor(app: App, settings: FlashyPluginSettings, onSubmit: (result: string) => void) {
 		super(app);
 		this.settings = settings;
@@ -448,20 +560,24 @@ class FlashcardCreatorModal extends Modal {
 		this.cards.push(this.getEmptyCardData());
 	}
 
+	/** Returns an empty card data object with default values. */
+
 	getEmptyCardData() {
 		return {
-			// MODIFIED: Uses the setting for the default type
 			cardType: this.settings.defaultModalCardType,
 			question: '',
 			correctAnswers: '',
 			incorrectAnswers: '',
 			fitbText: '',
-			qaAnswer: '', // NEW: Field for the Q&A answer
+			qaAnswer: '',
 			bgColor: '',
 			textColor: '',
 		};
 	}
 
+	/**
+	 * Renders the main content of the modal, including navigation and the card form.
+	 */
 	renderContent() {
 		const { contentEl } = this;
 		contentEl.empty();
@@ -503,6 +619,10 @@ class FlashcardCreatorModal extends Modal {
 				}));
 	}
 
+	/**
+	 * Renders the form for editing a single flashcard based on its type.
+	 * @param container The HTMLElement to append the card form to.
+	 */
 	renderCardForm(container: HTMLElement) {
 		const cardData = this.cards[this.editingIndex];
 
@@ -511,7 +631,7 @@ class FlashcardCreatorModal extends Modal {
 			.addDropdown(dropdown => dropdown
 				.addOption('multiple-choice', 'Multiple Choice')
 				.addOption('fill-in-the-blank', 'Fill-in-the-Blank')
-				.addOption('qa', 'Question/Answer') // NEW: Q&A option
+				.addOption('qa', 'Question/Answer')
 				.setValue(cardData.cardType)
 				.onChange(value => {
 					cardData.cardType = value;
@@ -543,7 +663,7 @@ class FlashcardCreatorModal extends Modal {
 					text.setPlaceholder("e.g., The OSI model has {{seven}} layers.").setValue(cardData.fitbText).onChange(value => cardData.fitbText = value);
 					text.inputEl.rows = 4;
 				});
-		} else { // NEW: Form for Q&A card type
+		} else {
 			new Setting(container)
 				.setName("Question")
 				.addTextArea(text => {
@@ -570,6 +690,9 @@ class FlashcardCreatorModal extends Modal {
 			.addText(text => text.setValue(cardData.textColor).onChange(value => cardData.textColor = value));
 	}
 
+	/**
+	 * Builds the final markdown string for the flashcard deck based on the collected card data.
+	 */
 	buildDeckString(): string {
 		return this.cards
 			.filter(cardData => (cardData.question && cardData.question.trim() !== "") || (cardData.fitbText && cardData.fitbText.trim() !== ""))
@@ -600,17 +723,29 @@ class FlashcardCreatorModal extends Modal {
 			}).join('\n---\n');
 	}
 
+	/** Called when the modal is opened. */
 	onOpen() {
 		this.renderContent();
 	}
 
+	/** Called when the modal is closed. */
 	onClose() {
 		this.contentEl.empty();
 	}
 }
 
+/**
+ * Plugin setting tab for Flashy.
+ * Allows users to configure various plugin behaviors and default card creation options.
+ */
 class FlashySettingTab extends PluginSettingTab {
 	plugin: FlashyPlugin;
+
+	/**
+	 * Creates an instance of FlashySettingTab.
+	 * @param app The Obsidian App instance.
+	 * @param plugin The FlashyPlugin instance.
+	 */
 	constructor(app: App, plugin: FlashyPlugin) {
 		super(app, plugin);
 		this.plugin = plugin;
@@ -620,7 +755,6 @@ class FlashySettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.createEl('h2', { text: 'Settings for Flashy' });
 
-		// --- BEHAVIOR ---
 		containerEl.createEl('h3', { text: 'Behavior' });
 		new Setting(containerEl)
 			.setName('Shuffle card order')
@@ -651,7 +785,6 @@ class FlashySettingTab extends PluginSettingTab {
 				}
 			}));
 
-		// --- CARD CREATION ---
 		containerEl.createEl('h3', { text: 'Card Creation' });
 		new Setting(containerEl)
 			.setName('Default card type in modal')
@@ -665,5 +798,25 @@ class FlashySettingTab extends PluginSettingTab {
 					this.plugin.settings.defaultModalCardType = value as any;
 					await this.plugin.saveSettings();
 				}));
+
+		containerEl.createEl('h3', { text: 'Support' });
+		new Setting(containerEl)
+			.setName('Sponsor Development')
+			.setDesc('If you find Flashy useful, please consider supporting its development. It makes a huge difference!')
+			.addButton(button => button
+				.setButtonText("Buy Me a Coffee")
+				.setTooltip("https://buymeacoffee.com/masonguinn")
+				.onClick(() => {
+					window.open("https://buymeacoffee.com/masonguinn");
+				}))
+			.controlEl.createEl('iframe', {
+			attr: {
+				src: "https://github.com/sponsors/MasonGuinn/button",
+				title: "Sponsor MasonGuinn",
+				height: "32",
+				width: "114",
+				style: "border: 0; border-radius: 6px;"
+			}
+		});
 	}
 }

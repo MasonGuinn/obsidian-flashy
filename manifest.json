@@ -6,6 +6,10 @@
 	"description": "Creates simple flashcards from code blocks.",
 	"author": "Mason",
 	"authorUrl": "https://obsidian.md",
-	"fundingUrl": "https://obsidian.md/pricing",
+	"fundingUrl": {
+		"Buy Me a Coffee": "https://buymeacoffee.com/masonguinn",
+		"GitHub Sponsor": "https://github.com/sponsors",
+		"Patreon": "https://www.patreon.com/"
+	},
 	"isDesktopOnly": false
 }

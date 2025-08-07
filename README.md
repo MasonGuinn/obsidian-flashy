@@ -1,94 +1,132 @@
-# Flashy
+![Flashy Banner](https://placehold.co/1400x200/2f3542/74b9ff?text=Flashy&font=raleway)
 
-This is a simple flashcard plugin for Obsidian (https://obsidian.md).
+**Flashy** is a simple but powerful plugin for Obsidian that allows you to create and review interactive flashcards directly inside your notes. Using a clean and intuitive syntax, you can build decks for multiple-choice, fill-in-the-blank, and classic Q&A style cards.
 
-This project uses TypeScript to provide type checking and documentation.
-The repo depends on the latest plugin API (obsidian.d.ts) in TypeScript Definition format, which contains TSDoc comments describing what it does.
+It's perfect for students, lifelong learners, and anyone looking to reinforce knowledge without leaving their Obsidian vault. This project started as a way to study for cybersecurity topics, so it's built with flexibility in mind!
 
-This sample plugin demonstrates some of the basic functionality the plugin API can do.
-- Adds a ribbon icon, which shows a Notice when clicked.
-- Adds a command "Open Sample Modal" which opens a Modal.
-- Adds a plugin setting tab to the settings page.
-- Registers a global click event and output 'click' to the console.
-- Registers a global interval which logs 'setInterval' to the console.
+---
 
-## First time developing plugins?
+## ✨ Features
 
-Quick starting guide for new plugin devs:
+* **Multiple Card Types:** Create multiple-choice, fill-in-the-blank, and classic question/answer cards.
+* **Intuitive Syntax:** Write flashcards using a simple, markdown-friendly syntax that's easy to remember.
+* **Deck Creation:** Combine multiple cards into a single, reviewable deck within one code block.
+* **Session Tracking:** Get a summary of your performance after completing a deck.
+* **Interactive UI:** A clean, modern interface that works beautifully in both light and dark mode.
+* **Ribbon Icon Creator:** Quickly create new cards using a handy pop-up modal, accessible from the Obsidian ribbon.
+* **Keyboard Navigation:** Speed through your review sessions with hotkeys for navigation and answering.
+* **Custom Styling:** Apply custom background and text colors to individual cards or entire decks.
+* **Configurable:** Customize your experience with settings like shuffling cards and answers.
 
-- Check if [someone already developed a plugin for what you want](https://obsidian.md/plugins)! There might be an existing plugin similar enough that you can partner up with.
-- Make a copy of this repo as a template with the "Use this template" button (login to GitHub if you don't see it).
-- Clone your repo to a local development folder. For convenience, you can place this folder in your `.obsidian/plugins/your-plugin-name` folder.
-- Install NodeJS, then run `npm i` in the command line under your repo folder.
-- Run `npm run dev` to compile your plugin from `main.ts` to `main.js`.
-- Make changes to `main.ts` (or create new `.ts` files). Those changes should be automatically compiled into `main.js`.
-- Reload Obsidian to load the new version of your plugin.
-- Enable plugin in settings window.
-- For updates to the Obsidian API run `npm update` in the command line under your repo folder.
+---
 
-## Releasing new releases
+## 🚀 Creating Cards with the Ribbon Icon
 
-- Update your `manifest.json` with your new version number, such as `1.0.1`, and the minimum Obsidian version required for your latest release.
-- Update your `versions.json` file with `"new-plugin-version": "minimum-obsidian-version"` so older versions of Obsidian can download an older version of your plugin that's compatible.
-- Create new GitHub release using your new version number as the "Tag version". Use the exact version number, don't include a prefix `v`. See here for an example: https://github.com/obsidianmd/obsidian-sample-plugin/releases
-- Upload the files `manifest.json`, `main.js`, `styles.css` as binary attachments. Note: The manifest.json file must be in two places, first the root path of your repository and also in the release.
-- Publish the release.
+For a more guided experience, you can use the Flashy modal:
 
-> You can simplify the version bump process by running `npm version patch`, `npm version minor` or `npm version major` after updating `minAppVersion` manually in `manifest.json`.
-> The command will bump version in `manifest.json` and `package.json`, and add the entry for the new version to `versions.json`
+1.  Click the **"Create Flashy Cards"** icon in the left-hand ribbon (it looks like a stack of blocks).
+2.  A modal will pop up, allowing you to build a full deck of cards, one by one.
+3.  Click **"Add New Card"** to add more cards to your deck, and use "Previous Card" to go back and edit.
+4.  When you're done, click **"Finish & Insert Deck"**. The complete `flashy` code block will be inserted into your active note.
 
-## Adding your plugin to the community plugin list
+> **Note:** You must be in **Editing View** to insert cards from the modal.
 
-- Check the [plugin guidelines](https://docs.obsidian.md/Plugins/Releasing/Plugin+guidelines).
-- Publish an initial version.
-- Make sure you have a `README.md` file in the root of your repo.
-- Make a pull request at https://github.com/obsidianmd/obsidian-releases to add your plugin.
+---
 
-## How to use
+## ✍️ Creating Cards with Markdown Code Blocks
 
-- Clone this repo.
-- Make sure your NodeJS is at least v16 (`node --version`).
-- `npm i` or `yarn` to install dependencies.
-- `npm run dev` to start compilation in watch mode.
+Creating flashcards is as simple as adding a `flashy` code block to your note.
 
-## Manually installing the plugin
+### The `flashy` Code Block
 
-- Copy over `main.js`, `styles.css`, `manifest.json` to your vault `VaultFolder/.obsidian/plugins/your-plugin-id/`.
+Start by fencing your content with ` ```flashy ` and end it with ` ``` `.
 
-## Improve code quality with eslint (optional)
-- [ESLint](https://eslint.org/) is a tool that analyzes your code to quickly find problems. You can run ESLint against your plugin to find common bugs and ways to improve your code. 
-- To use eslint with this project, make sure to install eslint from terminal:
-  - `npm install -g eslint`
-- To use eslint to analyze this project use this command:
-  - `eslint main.ts`
-  - eslint will then create a report with suggestions for code improvement by file and line number.
-- If your source code is in a folder, such as `src`, you can use eslint with this command to analyze all files in that folder:
-  - `eslint .\src\`
+````
+```flashy
+[Your Cards Go Here]
+```
+````
+### Card Types
 
-## Funding URL
+Flashy supports three main types of cards.
 
-You can include funding URLs where people who use your plugin can financially support it.
+#### 1. Multiple-Choice Cards
+The first line is the question. Each following line is an answer choice. Mark one or more **correct** answers by starting the line with an equals sign (`=`). Incorrect answers have no prefix.
 
-The simple way is to set the `fundingUrl` field to your link in your `manifest.json` file:
+**Syntax:**
+````
+```flashy
+What is 10+20?
+=30
+20
+10
+50
+```
+````
 
-```json
-{
-    "fundingUrl": "https://buymeacoffee.com"
-}
+#### 2. Fill-in-the-Blank Cards
+The entire card is on a single line. Write out the full sentence, but wrap the part you want to hide (the answer) in **double curly braces** `{{answer}}`.
+
+**Syntax:**
+````
+```flashy
+Humans have {{206}} bones in their body
+```
+````
+
+#### 3. Classic Q&A Cards
+The first line (or lines) is the question. The answer is separated by a line starting with `===`.
+
+**Syntax:**
+```
+This plugin is
+===Awesome
 ```
 
-If you have multiple URLs, you can also do:
+### Creating a Deck
+To create a deck with multiple cards in one block, simply separate each card with `---` on a new line.
 
-```json
-{
-    "fundingUrl": {
-        "Buy Me a Coffee": "https://buymeacoffee.com",
-        "GitHub Sponsor": "https://github.com/sponsors",
-        "Patreon": "https://www.patreon.com/"
-    }
-}
+**Example:**
+````
+```flashy
+What is 10+20?
+=30
+20
+10
+50
+---
+Humans have {{206}} bones in their body
+---
+This plugin is
+===Awesome
 ```
+````
 
-## API Documentation
+### Custom Styling (Optional)
+You can apply custom background to your cards. More customization will be added in later updates.
 
-See https://github.com/obsidianmd/obsidian-api
+* **Block-Level Styling:** To apply a style to **every card** in a `flashy` block, add a properties line at the very top using double brackets
+    `[[bg=#2c3e50]]`
+
+* **Card-Level Styling:** To style just a **single card**, use single brackets at the beginning of that specific card. This will override any block-level styles.
+    `[bg=gold]`
+
+---
+
+## 📦 Manual Installation
+
+This plugin is not yet in the community store. To install it manually:
+
+1.  Download the `main.js`, `styles.css`, and `manifest.json` files from the latest [GitHub Release](https://github.com/MasonGuinn/obsidian-flashy/releases).
+2.  Create a new folder named `flashy` inside your Obsidian vault's `/.obsidian/plugins/` directory.
+3.  Place the three downloaded files inside the new `flashy` folder.
+4.  Reload Obsidian.
+5.  Go to `Settings -> Community Plugins`, find "Flashy", and enable it.
+
+---
+
+## 💓 Support
+
+<a href="https://www.buymeacoffee.com/MasonGuinn" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+
+[Sponsor @MasonGuinn on GitHub](https://github.com/sponsors/MasonGuinn)
