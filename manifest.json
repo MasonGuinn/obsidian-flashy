@@ -1,15 +1,14 @@
 {
 	"id": "flashy",
 	"name": "Flashy",
-	"version": "2.3.0",
+	"version": "2.2.2",
 	"minAppVersion": "0.15.0",
 	"description": "Creates simple flashcards from code blocks.",
 	"author": "Mason",
 	"authorUrl": "https://obsidian.md",
 	"fundingUrl": {
 		"Buy Me a Coffee": "https://buymeacoffee.com/masonguinn",
-		"GitHub Sponsor": "https://github.com/sponsors",
-		"Patreon": "https://www.patreon.com/"
+		"GitHub Sponsor": "https://github.com/sponsors/MasonGuinn"
 	},
 	"isDesktopOnly": false
 }
