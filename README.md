@@ -20,6 +20,20 @@ It's perfect for students, lifelong learners, and anyone looking to reinforce kn
 
 ---
 
+## Examples
+
+<img width="642" height="434" alt="before" src="https://github.com/user-attachments/assets/b928b973-4583-448a-a8b3-c76444d30269" />
+
+https://github.com/user-attachments/assets/0d2746dd-9705-4edd-926b-f9239e90d5c6
+
+https://github.com/user-attachments/assets/42fe4236-116c-4bfd-83a4-0404626bcb41
+
+https://github.com/user-attachments/assets/ffceeced-5a95-4bd3-beda-ffa55ae1b796
+
+
+
+
+
 ## 🚀 Creating Cards with the Ribbon Icon
 
 For a more guided experience, you can use the Flashy modal:
@@ -130,3 +144,6 @@ This plugin is not yet in the community store. To install it manually:
 <a href="https://www.buymeacoffee.com/MasonGuinn" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 [Sponsor @MasonGuinn on GitHub](https://github.com/sponsors/MasonGuinn)
+
+
+
