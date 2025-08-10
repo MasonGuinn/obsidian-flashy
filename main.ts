@@ -56,6 +56,20 @@ interface QACard extends BaseFlashcard {
  */
 type Flashcard = MultipleChoiceCard | FillInTheBlankCard | QACard;
 
+export type FlashyCardType = 'multiple-choice' | 'fill-in-the-blank' | 'qa';
+
+interface ModalCardData {
+	cardType: FlashyCardType;
+	question: string;
+	correctAnswers: string;
+	incorrectAnswers: string;
+	fitbText: string;
+	qaAnswer: string;
+
+	bgColor: string;
+	textColor: string;
+}
+
 /**
  * Interface for the plugin's settings.
  * Defines configurable options such as card shuffling, auto-advancement,
@@ -212,14 +226,15 @@ export default class FlashyPlugin extends Plugin {
 				if (!cardData) return;
 
 				if (cardData.customBackgroundColor) {
-					mainContainer.style.backgroundColor = cardData.customBackgroundColor;
+					mainContainer.style.setProperty('--flashy-bg-override', cardData.customBackgroundColor);
 				} else {
-					mainContainer.style.backgroundColor = '';
+					mainContainer.style.removeProperty('--flashy-bg-override');
 				}
+
 				if (cardData.customTextColor) {
-					mainContainer.style.color = cardData.customTextColor;
+					mainContainer.style.setProperty('--flashy-text-override', cardData.customTextColor);
 				} else {
-					mainContainer.style.color = '';
+					mainContainer.style.removeProperty('--flashy-text-override');
 				}
 
 				renderHeader(mainContainer, cardData);
@@ -542,7 +557,7 @@ export default class FlashyPlugin extends Plugin {
  * Allows users to define multiple-choice, fill-in-the-blank, or Q&A cards.
  */
 class FlashcardCreatorModal extends Modal {
-	private cards: any[] = [];
+	private cards: ModalCardData[] = [];
 	private editingIndex: number = 0;
 	private readonly onSubmit: (result: string) => void;
 	private settings: FlashyPluginSettings;
@@ -634,7 +649,7 @@ class FlashcardCreatorModal extends Modal {
 				.addOption('qa', 'Question/Answer')
 				.setValue(cardData.cardType)
 				.onChange(value => {
-					cardData.cardType = value;
+					cardData.cardType = value as FlashyCardType;
 					this.renderContent();
 				}));
 
@@ -795,7 +810,7 @@ class FlashySettingTab extends PluginSettingTab {
 				.addOption('qa', 'Question/Answer')
 				.setValue(this.plugin.settings.defaultModalCardType)
 				.onChange(async (value) => {
-					this.plugin.settings.defaultModalCardType = value as any;
+					this.plugin.settings.defaultModalCardType = value as FlashyCardType;
 					await this.plugin.saveSettings();
 				}));
 
