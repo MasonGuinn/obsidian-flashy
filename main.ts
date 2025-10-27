@@ -769,7 +769,6 @@ class FlashySettingTab extends PluginSettingTab {
 	display(): void {
 		const { containerEl } = this;
 		containerEl.empty();
-		containerEl.createEl('h2', { text: 'Settings for Flashy' });
 
 		new Setting(containerEl).setName('Behavior').setHeading();
 		new Setting(containerEl)
@@ -831,7 +830,6 @@ class FlashySettingTab extends PluginSettingTab {
 					title: "Sponsor MasonGuinn",
 					height: "32",
 					width: "114",
-					style: "border: 0; border-radius: 6px;"
 				},
 				cls: "flashy-sponsor-iframe"
 			});
