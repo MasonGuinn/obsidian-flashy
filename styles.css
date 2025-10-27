@@ -264,3 +264,8 @@ body.theme-dark {
 	align-items: center;
 	white-space: normal;
 }
+
+.flashy-sponsor-iframe {
+	border: none;
+	border-radius: 6px;
+}

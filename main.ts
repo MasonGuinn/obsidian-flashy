@@ -111,7 +111,7 @@ export default class FlashyPlugin extends Plugin {
 		 * Registers a ribbon icon to the Obsidian UI.
 		 * Clicking this icon opens a modal for creating new flashcards.
 		 */
-		this.addRibbonIcon('blocks', 'Create Flashy Cards', () => {
+		this.addRibbonIcon('blocks', 'Create flashy cards', () => {
 			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
 			if (view) {
 				if (view.getMode() === 'source') {
@@ -121,7 +121,7 @@ export default class FlashyPlugin extends Plugin {
 						}
 					}).open();
 				} else {
-					new Notice("Please switch to Editing View to create a flashcard.");
+					new Notice("Please switch to editing view to create a flashcard.");
 				}
 			} else {
 				new Notice("Please open a note to create a flashcard.");
@@ -204,13 +204,13 @@ export default class FlashyPlugin extends Plugin {
 				stats.answered++;
 
 				if (isCorrect && settings.autoAdvance && currentCardIndex < cardsToRender.length - 1) {
-					setTimeout(() => {
+					window.setTimeout(() => {
 						renderCard(currentCardIndex + 1);
 					}, settings.autoAdvanceDelay);
 				}
 
 				if (stats.answered === cardsToRender.length) {
-					setTimeout(() => renderSummary(), 1000);
+					window.setTimeout(() => renderSummary(), 1000);
 				}
 			};
 
@@ -238,7 +238,7 @@ export default class FlashyPlugin extends Plugin {
 				}
 
 				renderHeader(mainContainer, cardData);
-				const body = mainContainer.createDiv({cls: 'flashcard-body'});
+				const body = mainContainer.createDiv({ cls: 'flashcard-body' });
 
 				switch (cardData.type) {
 					case 'multiple-choice':
@@ -259,13 +259,13 @@ export default class FlashyPlugin extends Plugin {
 			 */
 			function renderSummary() {
 				mainContainer.empty();
-				const summaryEl = mainContainer.createDiv({cls: 'flashcard-summary'});
-				summaryEl.createEl('h3', {text: 'Session Complete!'});
+				const summaryEl = mainContainer.createDiv({ cls: 'flashcard-summary' });
+				summaryEl.createEl('h3', { text: 'Session complete!' });
 				const score = cardsToRender.length > 0 ? (stats.correct / cardsToRender.length * 100) : 0;
-				summaryEl.createEl('p', {text: `You answered ${stats.correct} out of ${cardsToRender.length} cards correctly on the first try.`});
-				summaryEl.createEl('p', {text: `Score: ${score.toFixed(0)}%`});
+				summaryEl.createEl('p', { text: `You answered ${stats.correct} out of ${cardsToRender.length} cards correctly on the first try.` });
+				summaryEl.createEl('p', { text: `Score: ${score.toFixed(0)}%` });
 
-				const resetButton = summaryEl.createEl('button', {text: 'Review Again', cls: 'flashcard-reset'});
+				const resetButton = summaryEl.createEl('button', { text: 'Review again', cls: 'flashcard-reset' });
 				resetButton.addEventListener('click', () => {
 					stats = { correct: 0, incorrect: 0, answered: 0 };
 					answeredCardIndexes.clear();
@@ -281,7 +281,7 @@ export default class FlashyPlugin extends Plugin {
 			 * @param card The Flashcard data.
 			 */
 			function renderHeader(container: HTMLElement, card: Flashcard) {
-				const header = container.createDiv({cls: 'flashcard-header'});
+				const header = container.createDiv({ cls: 'flashcard-header' });
 
 				const titleContainer = header.createDiv();
 				let questionText = card.question;
@@ -292,7 +292,7 @@ export default class FlashyPlugin extends Plugin {
 
 				const resetButton = header.createEl('button', { cls: 'flashcard-reset flashy-icon-button' });
 				setIcon(resetButton, 'refresh-cw');
-				resetButton.ariaLabel = "Reset Session (R)";
+				resetButton.ariaLabel = "Reset session (R)";
 				resetButton.addEventListener('click', () => {
 					stats = { correct: 0, incorrect: 0, answered: 0 };
 					answeredCardIndexes.clear();
@@ -355,7 +355,7 @@ export default class FlashyPlugin extends Plugin {
 			 * @param onGraded Callback function to call when the card is graded.
 			 */
 			function renderFillInTheBlankBody(container: HTMLElement, card: FillInTheBlankCard, onGraded: (correct: boolean) => void) {
-				const formContainer = container.createDiv({cls: 'flashcard-fill-container'});
+				const formContainer = container.createDiv({ cls: 'flashcard-fill-container' });
 				const input = new TextComponent(formContainer).setPlaceholder("Type your answer...").inputEl;
 				input.classList.add('flashcard-fill-input');
 				const submitButton = formContainer.createEl('button', { text: "Submit", cls: "flashcard-fill-submit" });
@@ -371,9 +371,9 @@ export default class FlashyPlugin extends Plugin {
 					input.classList.add(feedbackClass);
 					container.createEl('p', { text: feedbackText, cls: `flashcard-feedback ${feedbackClass}` });
 					if (!isCorrect) {
-						const reveal = container.createEl('p', {cls: 'flashcard-correct-answer-reveal'});
+						const reveal = container.createEl('p', { cls: 'flashcard-correct-answer-reveal' });
 						reveal.appendText('The correct answer was: ');
-						reveal.createEl('span', {text: card.answer});
+						reveal.createEl('span', { text: card.answer });
 					}
 				};
 				submitButton.addEventListener('click', checkAnswer);
@@ -396,10 +396,10 @@ export default class FlashyPlugin extends Plugin {
 				const gradingContainer = qaContainer.createDiv({ cls: 'qa-grading-buttons' });
 				gradingContainer.hide();
 
-				const showAnswerButton = qaContainer.createEl('button', { text: "Show Answer", cls: 'mod-cta' });
+				const showAnswerButton = qaContainer.createEl('button', { text: "Show answer", cls: 'mod-cta' });
 
-				const gradeCorrectButton = gradingContainer.createEl('button', { text: 'I Was Right', cls: 'qa-grading-button correct' });
-				const gradeIncorrectButton = gradingContainer.createEl('button', { text: 'I Was Wrong', cls: 'qa-grading-button incorrect' });
+				const gradeCorrectButton = gradingContainer.createEl('button', { text: 'I was right', cls: 'qa-grading-button correct' });
+				const gradeIncorrectButton = gradingContainer.createEl('button', { text: 'I was wrong', cls: 'qa-grading-button incorrect' });
 
 				const handleGrading = (correct: boolean) => {
 					onGraded(correct);
@@ -425,11 +425,11 @@ export default class FlashyPlugin extends Plugin {
 			 * @param onNavigate Callback function to navigate to a new card index.
 			 */
 			function renderControls(container: HTMLElement, currentIndex: number, total: number, onNavigate: (newIndex: number) => void) {
-				const controls = container.createDiv({cls: 'flashcard-controls'});
+				const controls = container.createDiv({ cls: 'flashcard-controls' });
 
 				const prevButton = controls.createEl('button', { cls: 'flashcard-nav flashy-icon-button' });
 				setIcon(prevButton, 'arrow-left');
-				prevButton.ariaLabel = 'Previous Card (Left Arrow)';
+				prevButton.ariaLabel = 'Previous card (left arrow)';
 				prevButton.disabled = currentIndex === 0;
 				prevButton.addEventListener('click', () => onNavigate(currentIndex - 1));
 
@@ -440,7 +440,7 @@ export default class FlashyPlugin extends Plugin {
 
 				const nextButton = controls.createEl('button', { cls: 'flashcard-nav flashy-icon-button' });
 				setIcon(nextButton, 'arrow-right');
-				nextButton.ariaLabel = 'Next Card (Right Arrow)';
+				nextButton.ariaLabel = 'Next card (right arrow)';
 				nextButton.disabled = currentIndex >= total - 1;
 				nextButton.addEventListener('click', () => onNavigate(currentIndex + 1));
 			}
@@ -468,7 +468,7 @@ export default class FlashyPlugin extends Plugin {
 				const cardBlocks = content.split(/\n---\n/);
 
 				return cardBlocks.map(block => {
-					let lines = block.trim().split('\n').filter(line => line.trim().length > 0);
+					const lines = block.trim().split('\n').filter(line => line.trim().length > 0);
 					if (lines.length === 0) return null;
 
 					const cardProperties: { bg?: string; color?: string } = {};
@@ -500,7 +500,7 @@ export default class FlashyPlugin extends Plugin {
 						const questionLine = lines[0];
 						const fitbMatch = questionLine.match(/(.*){{(.*)}}(.*)/);
 						if (fitbMatch && fitbMatch[2]) {
-							const [_, q1, answer, q2] = fitbMatch;
+							const [, q1, answer, q2] = fitbMatch;
 							card = {
 								type: 'fill-in-the-blank',
 								question: q1.trim(), questionPartTwo: q2.trim() || undefined, answer: answer.trim(),
@@ -535,7 +535,7 @@ export default class FlashyPlugin extends Plugin {
 	/**
 	 * Called when the plugin is unloaded.
 	 */
-	onunload() {}
+	onunload() { }
 
 	/**
 	 * Loads the plugin settings from storage.
@@ -558,7 +558,7 @@ export default class FlashyPlugin extends Plugin {
  */
 class FlashcardCreatorModal extends Modal {
 	private cards: ModalCardData[] = [];
-	private editingIndex: number = 0;
+	private editingIndex = 0;
 	private readonly onSubmit: (result: string) => void;
 	private settings: FlashyPluginSettings;
 
@@ -597,13 +597,13 @@ class FlashcardCreatorModal extends Modal {
 		const { contentEl } = this;
 		contentEl.empty();
 
-		contentEl.createEl("h2", { text: `Editing Flashcard ${this.editingIndex + 1} of ${this.cards.length}` });
+		contentEl.createEl("h2", { text: `Editing flashcard ${this.editingIndex + 1} of ${this.cards.length}` });
 
 		this.renderCardForm(contentEl.createDiv());
 
 		new Setting(contentEl)
 			.addButton(button => button
-				.setButtonText("Previous Card")
+				.setButtonText("Previous card")
 				.setDisabled(this.editingIndex === 0)
 				.onClick(() => {
 					if (this.editingIndex > 0) {
@@ -612,7 +612,7 @@ class FlashcardCreatorModal extends Modal {
 					}
 				}))
 			.addButton(button => button
-				.setButtonText(this.editingIndex === this.cards.length - 1 ? "Add New Card" : "Next Card")
+				.setButtonText(this.editingIndex === this.cards.length - 1 ? "Add new card" : "Next card")
 				.onClick(() => {
 					this.editingIndex++;
 					if (this.editingIndex === this.cards.length) {
@@ -623,7 +623,7 @@ class FlashcardCreatorModal extends Modal {
 
 		new Setting(contentEl)
 			.addButton(button => button
-				.setButtonText("Finish & Insert Deck")
+				.setButtonText("Finish & insert deck")
 				.setCta()
 				.onClick(() => {
 					const deckString = this.buildDeckString();
@@ -642,11 +642,11 @@ class FlashcardCreatorModal extends Modal {
 		const cardData = this.cards[this.editingIndex];
 
 		new Setting(container)
-			.setName('Card Type')
+			.setName('Card type')
 			.addDropdown(dropdown => dropdown
-				.addOption('multiple-choice', 'Multiple Choice')
-				.addOption('fill-in-the-blank', 'Fill-in-the-Blank')
-				.addOption('qa', 'Question/Answer')
+				.addOption('multiple-choice', 'Multiple choice')
+				.addOption('fill-in-the-blank', 'Fill-in-the-blank')
+				.addOption('qa', 'Question/answer')
 				.setValue(cardData.cardType)
 				.onChange(value => {
 					cardData.cardType = value as FlashyCardType;
@@ -656,24 +656,24 @@ class FlashcardCreatorModal extends Modal {
 		if (cardData.cardType === 'multiple-choice') {
 			new Setting(container)
 				.setName('Question')
-				.addText(text => text.setPlaceholder('e.g., Which layer is the Network layer?').setValue(cardData.question).onChange(value => cardData.question = value));
+				.addText(text => text.setPlaceholder('e.g., Which layer is the network layer?').setValue(cardData.question).onChange(value => cardData.question = value));
 
 			new Setting(container)
-				.setName('Correct Answer(s)').setDesc("One answer per line.")
+				.setName('Correct answer(s)').setDesc("One answer per line.")
 				.addTextArea(text => {
 					text.setPlaceholder("e.g., Layer 3").setValue(cardData.correctAnswers).onChange(value => cardData.correctAnswers = value);
 					text.inputEl.rows = 4;
 				});
 
 			new Setting(container)
-				.setName('Incorrect Answer(s)').setDesc("One answer per line.")
+				.setName('Incorrect answer(s)').setDesc("One answer per line.")
 				.addTextArea(text => {
 					text.setPlaceholder("e.g., Layer 2\nLayer 7").setValue(cardData.incorrectAnswers).onChange(value => cardData.incorrectAnswers = value);
 					text.inputEl.rows = 4;
 				});
 		} else if (cardData.cardType === 'fill-in-the-blank') {
 			new Setting(container)
-				.setName('Full Text').setDesc("Wrap the answer in {{double curly braces}}.")
+				.setName('Full text').setDesc("Wrap the answer in {{double curly braces}}.")
 				.addTextArea(text => {
 					text.setPlaceholder("e.g., The OSI model has {{seven}} layers.").setValue(cardData.fitbText).onChange(value => cardData.fitbText = value);
 					text.inputEl.rows = 4;
@@ -698,10 +698,10 @@ class FlashcardCreatorModal extends Modal {
 		}
 
 		new Setting(container)
-			.setName('Custom Background Color').setDesc("(Optional)")
+			.setName('Custom background color').setDesc("(optional)")
 			.addText(text => text.setValue(cardData.bgColor).onChange(value => cardData.bgColor = value));
 		new Setting(container)
-			.setName('Custom Text Color').setDesc("(Optional)")
+			.setName('Custom text color').setDesc("(optional)")
 			.addText(text => text.setValue(cardData.textColor).onChange(value => cardData.textColor = value));
 	}
 
@@ -721,12 +721,13 @@ class FlashcardCreatorModal extends Modal {
 				}
 
 				switch (cardData.cardType) {
-					case 'multiple-choice':
+					case 'multiple-choice': {
 						cardString += `${cardData.question}\n`;
 						const correct = cardData.correctAnswers.trim().split('\n').map((ans: string) => `=${ans.trim()}`);
 						const incorrect = cardData.incorrectAnswers.trim().split('\n').map((ans: string) => ans.trim());
 						cardString += [...correct, ...incorrect].filter(Boolean).join('\n');
 						break;
+					}
 					case 'fill-in-the-blank':
 						cardString += cardData.fitbText;
 						break;
@@ -770,7 +771,7 @@ class FlashySettingTab extends PluginSettingTab {
 		containerEl.empty();
 		containerEl.createEl('h2', { text: 'Settings for Flashy' });
 
-		containerEl.createEl('h3', { text: 'Behavior' });
+		new Setting(containerEl).setName('Behavior').setHeading();
 		new Setting(containerEl)
 			.setName('Shuffle card order')
 			.setDesc('Randomize the order of cards within a block each session.')
@@ -800,38 +801,39 @@ class FlashySettingTab extends PluginSettingTab {
 				}
 			}));
 
-		containerEl.createEl('h3', { text: 'Card Creation' });
+		new Setting(containerEl).setName('Card creation').setHeading();
 		new Setting(containerEl)
 			.setName('Default card type in modal')
 			.setDesc('Choose the default card type when opening the card creation modal.')
 			.addDropdown(dropdown => dropdown
-				.addOption('multiple-choice', 'Multiple Choice')
-				.addOption('fill-in-the-blank', 'Fill-in-the-Blank')
-				.addOption('qa', 'Question/Answer')
+				.addOption('multiple-choice', 'Multiple choice')
+				.addOption('fill-in-the-blank', 'Fill-in-the-blank')
+				.addOption('qa', 'Question/answer')
 				.setValue(this.plugin.settings.defaultModalCardType)
 				.onChange(async (value) => {
 					this.plugin.settings.defaultModalCardType = value as FlashyCardType;
 					await this.plugin.saveSettings();
 				}));
 
-		containerEl.createEl('h3', { text: 'Support' });
+		new Setting(containerEl).setName('Support').setHeading();
 		new Setting(containerEl)
-			.setName('Sponsor Development')
+			.setName('Sponsor development')
 			.setDesc('If you find Flashy useful, please consider supporting its development. It makes a huge difference!')
 			.addButton(button => button
-				.setButtonText("Buy Me a Coffee")
+				.setButtonText("Buy me a coffee")
 				.setTooltip("https://buymeacoffee.com/masonguinn")
 				.onClick(() => {
 					window.open("https://buymeacoffee.com/masonguinn");
 				}))
 			.controlEl.createEl('iframe', {
-			attr: {
-				src: "https://github.com/sponsors/MasonGuinn/button",
-				title: "Sponsor MasonGuinn",
-				height: "32",
-				width: "114",
-				style: "border: 0; border-radius: 6px;"
-			}
-		});
+				attr: {
+					src: "https://github.com/sponsors/MasonGuinn/button",
+					title: "Sponsor MasonGuinn",
+					height: "32",
+					width: "114",
+					style: "border: 0; border-radius: 6px;"
+				},
+				cls: "flashy-sponsor-iframe"
+			});
 	}
 }
