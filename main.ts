@@ -79,8 +79,13 @@ interface FlashyPluginSettings {
 	shuffleCards: boolean;
 	shuffleAnswers: boolean;
 	autoAdvance: boolean;
+	autoAdvanceIncorrect: boolean;
 	autoAdvanceDelay: number;
 	defaultModalCardType: 'multiple-choice' | 'fill-in-the-blank' | 'qa';
+	keyPreviousCard: string;
+	keyNextCard: string;
+	keyResetSession: string;
+	enableKeyboardNav: boolean;
 }
 
 /**
@@ -90,8 +95,13 @@ const DEFAULT_SETTINGS: FlashyPluginSettings = {
 	shuffleCards: false,
 	shuffleAnswers: true,
 	autoAdvance: false,
+	autoAdvanceIncorrect: false,
 	autoAdvanceDelay: 1000,
 	defaultModalCardType: 'multiple-choice',
+	keyPreviousCard: 'ArrowLeft',
+	keyNextCard: 'ArrowRight',
+	keyResetSession: 'r',
+	enableKeyboardNav: true,
 }
 
 /**
@@ -134,16 +144,48 @@ export default class FlashyPlugin extends Plugin {
 		 */
 		this.registerMarkdownCodeBlockProcessor('flashy', (source, el, ctx) => {
 			const settings = this.settings;
-			let currentCardIndex = 0;
-			let stats = { correct: 0, incorrect: 0, answered: 0 };
-			const answeredCardIndexes = new Set<number>();
 
+			let currentCardIndex: number;
+			let stats: { correct: number, incorrect: number, answered: number };
+			let answeredCardIndexes: Set<number>;
+			let cardsToRender: Flashcard[];
 			const allCards = parseAllCards(source);
-			const cardsToRender = settings.shuffleCards ? [...allCards].sort(() => Math.random() - 0.5) : allCards;
 
-			if (cardsToRender.length === 0) {
+			if (allCards.length === 0) {
 				el.createEl('p', { text: 'No valid flashy cards found. Check your syntax!', cls: 'flashcard-error' });
 				return;
+			}
+
+			// Fisher-Yates shuffle algorithm to randomize an array.
+			function fisherYatesShuffle<T>(array: T[]): T[] {
+				const arr = [...array];
+				for (let i = arr.length - 1; i > 0; i--) {
+					const j = Math.floor(Math.random() * (i + 1));
+					[arr[i], arr[j]] = [arr[j], arr[i]];
+				}
+				return arr;
+			}
+
+			// Initialize/reset deck function
+			function initializeDeck() {
+				// Store the card that is *currently* at index 0 before resetting
+				const previousFirstCard = cardsToRender ? cardsToRender[0] : undefined;
+
+				// Reset stats
+				stats = { correct: 0, incorrect: 0, answered: 0 };
+				answeredCardIndexes = new Set<number>();
+
+				// Shuffle logic with the added check
+				if (settings.shuffleCards && allCards.length > 1) {
+					do {
+						cardsToRender = fisherYatesShuffle(allCards);
+					} while (previousFirstCard !== undefined && cardsToRender[0] === previousFirstCard);
+				} else {
+					cardsToRender = [...allCards];
+				}
+
+				// Always start at the beginning
+				currentCardIndex = 0;
 			}
 
 			const mainContainer = el.createDiv({ cls: 'flashcard-container' });
@@ -155,28 +197,24 @@ export default class FlashyPlugin extends Plugin {
 			 * @param event The KeyboardEvent object.
 			 */
 			const handleKeyDown = (event: KeyboardEvent) => {
+				if (!settings.enableKeyboardNav) return;
 				const activeEl = el.win.document.activeElement;
 				const isTyping = activeEl && activeEl.tagName === 'INPUT';
 
+				// Don't intercept keys if the flashcard block isn't focused/hovered
 				if (!el.contains(activeEl) && !el.matches(':hover')) return;
 
-				switch (event.key) {
-					case 'ArrowLeft':
-						event.preventDefault();
-						if (currentCardIndex > 0) renderCard(currentCardIndex - 1);
-						break;
-					case 'ArrowRight':
-						event.preventDefault();
-						if (currentCardIndex < cardsToRender.length - 1) renderCard(currentCardIndex + 1);
-						break;
-					case 'r':
-					case 'R':
-						if (isTyping) return;
-						event.preventDefault();
-						stats = { correct: 0, incorrect: 0, answered: 0 };
-						answeredCardIndexes.clear();
-						renderCard(0);
-						break;
+				if (event.key === settings.keyPreviousCard) {
+					event.preventDefault();
+					if (currentCardIndex > 0) renderCard(currentCardIndex - 1);
+				} else if (event.key === settings.keyNextCard) {
+					event.preventDefault();
+					if (currentCardIndex < cardsToRender.length - 1) renderCard(currentCardIndex + 1);
+				} else if (event.key.toLowerCase() === settings.keyResetSession.toLowerCase()) {
+					if (isTyping) return;
+					event.preventDefault();
+					initializeDeck();
+					renderCard(0);
 				}
 
 				const num = parseInt(event.key);
@@ -203,7 +241,10 @@ export default class FlashyPlugin extends Plugin {
 				else stats.incorrect++;
 				stats.answered++;
 
-				if (isCorrect && settings.autoAdvance && currentCardIndex < cardsToRender.length - 1) {
+				// Check if we should auto advance
+				const shouldAdvance = (isCorrect && settings.autoAdvance) || (!isCorrect && settings.autoAdvanceIncorrect);
+
+				if (shouldAdvance && currentCardIndex < cardsToRender.length - 1) {
 					window.setTimeout(() => {
 						renderCard(currentCardIndex + 1);
 					}, settings.autoAdvanceDelay);
@@ -267,13 +308,10 @@ export default class FlashyPlugin extends Plugin {
 
 				const resetButton = summaryEl.createEl('button', { text: 'Review again', cls: 'flashcard-reset' });
 				resetButton.addEventListener('click', () => {
-					stats = { correct: 0, incorrect: 0, answered: 0 };
-					answeredCardIndexes.clear();
+					initializeDeck();
 					renderCard(0);
 				});
 			}
-
-			renderCard(0);
 
 			/**
 			 * Renders the header section of a flashcard, including the question and a reset button.
@@ -294,8 +332,7 @@ export default class FlashyPlugin extends Plugin {
 				setIcon(resetButton, 'refresh-cw');
 				resetButton.ariaLabel = "Reset session (R)";
 				resetButton.addEventListener('click', () => {
-					stats = { correct: 0, incorrect: 0, answered: 0 };
-					answeredCardIndexes.clear();
+					initializeDeck();
 					renderCard(0);
 				});
 			}
@@ -309,7 +346,7 @@ export default class FlashyPlugin extends Plugin {
 			function renderMultipleChoiceBody(container: HTMLElement, card: MultipleChoiceCard, onGraded: (correct: boolean) => void) {
 				const buttonsContainer = container.createDiv({ cls: 'flashcard-buttons' });
 				const answers = card.answers;
-				const answersToShow = settings.shuffleAnswers ? [...answers].sort(() => Math.random() - 0.5) : answers;
+				const answersToShow = settings.shuffleAnswers ? fisherYatesShuffle(answers) : answers;
 				const totalCorrectAnswers = answers.filter(a => a.isCorrect).length;
 				let foundCorrectAnswers = 0;
 				let hasAnswered = false;
@@ -527,6 +564,10 @@ export default class FlashyPlugin extends Plugin {
 					return null;
 				}).filter((card): card is Flashcard => card !== null);
 			}
+
+			initializeDeck();
+			renderCard(0);
+
 		});
 
 		this.addSettingTab(new FlashySettingTab(this.app, this));
@@ -770,25 +811,43 @@ class FlashySettingTab extends PluginSettingTab {
 		const { containerEl } = this;
 		containerEl.empty();
 
+		// Behavior heading
 		new Setting(containerEl).setName('Behavior').setHeading();
+
+		// Shuffle card order
 		new Setting(containerEl)
 			.setName('Shuffle card order')
 			.setDesc('Randomize the order of cards within a block each session.')
 			.addToggle(toggle => toggle.setValue(this.plugin.settings.shuffleCards).onChange(async (value) => {
 				this.plugin.settings.shuffleCards = value; await this.plugin.saveSettings(); this.app.workspace.updateOptions();
 			}));
+
+		// Shuffle answer choices
 		new Setting(containerEl)
 			.setName('Shuffle answer choices')
 			.setDesc('Randomize the order of answers for multiple-choice cards.')
 			.addToggle(toggle => toggle.setValue(this.plugin.settings.shuffleAnswers).onChange(async (value) => {
 				this.plugin.settings.shuffleAnswers = value; await this.plugin.saveSettings(); this.app.workspace.updateOptions();
 			}));
+
+		// Auto-advance on correct
 		new Setting(containerEl)
 			.setName('Auto-advance on correct')
 			.setDesc('Automatically move to the next card after a correct answer.')
 			.addToggle(toggle => toggle.setValue(this.plugin.settings.autoAdvance).onChange(async (value) => {
 				this.plugin.settings.autoAdvance = value; await this.plugin.saveSettings();
 			}));
+
+		// Auto-advance on incorrect
+		new Setting(containerEl)
+			.setName('Auto-advance on incorrect')
+			.setDesc('Automatically move to the next card after an incorrect answer.')
+			.addToggle(toggle => toggle.setValue(this.plugin.settings.autoAdvanceIncorrect).onChange(async (value) => {
+				this.plugin.settings.autoAdvanceIncorrect = value;
+				await this.plugin.saveSettings();
+			}));
+
+		// Auto-advance delay
 		new Setting(containerEl)
 			.setName('Auto-advance delay (ms)')
 			.setDesc('The delay in milliseconds before advancing to the next card.')
@@ -800,7 +859,10 @@ class FlashySettingTab extends PluginSettingTab {
 				}
 			}));
 
+		// Card creation heading
 		new Setting(containerEl).setName('Card creation').setHeading();
+
+		// Default card type in modal
 		new Setting(containerEl)
 			.setName('Default card type in modal')
 			.setDesc('Choose the default card type when opening the card creation modal.')
@@ -814,7 +876,64 @@ class FlashySettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 
+		// Keyboard shortcuts heading
+		new Setting(containerEl).setName('Keyboard shortcuts').setHeading();
+
+		new Setting(containerEl)
+			.setName('Enable keyboard navigation')
+			.setDesc('Allow using keys (like arrows, R, 1-9) to navigate and interact with flashcards while focused.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.enableKeyboardNav)
+				.onChange(async (value) => {
+					this.plugin.settings.enableKeyboardNav = value;
+					await this.plugin.saveSettings();
+					this.display();
+				})
+			)
+
+		// Conditionally show/hide specific key settings
+		if (this.plugin.settings.enableKeyboardNav) {
+			// Previous card key
+			new Setting(containerEl)
+				.setName('Previous card key')
+				.setDesc('Key to navigate to the previous card. Use values like "ArrowLeft", "a", "PageUp", etc.')
+				.addText(text => text
+					.setPlaceholder('ArrowLeft')
+					.setValue(this.plugin.settings.keyPreviousCard)
+					.onChange(async (value) => {
+						this.plugin.settings.keyPreviousCard = value.trim();
+						await this.plugin.saveSettings();
+					}));
+
+			// Next card key
+			new Setting(containerEl)
+				.setName('Next card key')
+				.setDesc('Key to navigate to the next card. Use values like "ArrowRight", "d", "PageDown", etc.')
+				.addText(text => text
+					.setPlaceholder('ArrowRight')
+					.setValue(this.plugin.settings.keyNextCard)
+					.onChange(async (value) => {
+						this.plugin.settings.keyNextCard = value.trim();
+						await this.plugin.saveSettings();
+					}));
+
+			// Reset session key
+			new Setting(containerEl)
+				.setName('Reset session key')
+				.setDesc('Key to reset the current session. Use values like "r", "R", "F5" etc.')
+				.addText(text => text
+					.setPlaceholder('r')
+					.setValue(this.plugin.settings.keyResetSession)
+					.onChange(async (value) => {
+						this.plugin.settings.keyResetSession = value.trim();
+						await this.plugin.saveSettings();
+					}));
+		}
+
+		// Support heading
 		new Setting(containerEl).setName('Support').setHeading();
+
+		// Sponsor development
 		new Setting(containerEl)
 			.setName('Sponsor development')
 			.setDesc('If you find Flashy useful, please consider supporting its development. It makes a huge difference!')
